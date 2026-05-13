@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs wc -l)",
+      "Bash(xargs -I {} wc -l {})",
+      "Bash(flutter analyze *)",
+      "Bash(git log *)",
+      "Bash(git check-ignore *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(pip --version)",
+      "Bash(git filter-repo *)",
+      "Bash(winget *)",
+      "Bash(pip install *)",
+      "Bash(git push *)",
+      "Bash(git remote *)",
+      "Bash(git config *)"
+    ]
+  }
+}
