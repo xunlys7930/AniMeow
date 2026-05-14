@@ -7,14 +7,25 @@ import 'package:flutter/services.dart';
 import '../utils/api_config.dart';
 
 class UpdateService {
-  static const String updateUrl = 'http://47.103.83.247:3000/api/check-update';
-
   /// 检查更新
   static Future<void> checkUpdate(
     BuildContext context, {
     bool showNoUpdate = false,
     bool isAutoCheck = false,
   }) async {
+    final updateUri = ApiConfig.cloudUri('/api/check-update');
+    if (updateUri == null) {
+      debugPrint('检查更新已跳过：未配置 CLOUD_API_BASE');
+      if (!isAutoCheck && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('未配置云端地址（CLOUD_API_BASE），已跳过检查更新'),
+          ),
+        );
+      }
+      return;
+    }
+
     try {
       // 获取当前版本
       final packageInfo = await PackageInfo.fromPlatform();
@@ -22,7 +33,7 @@ class UpdateService {
 
       // 获取远程版本（设置超时）
       final response = await http.get(
-        Uri.parse(updateUrl),
+        updateUri,
         headers: {'Authorization': 'Bearer ${ApiConfig.apiToken}'},
       ).timeout(const Duration(seconds: 10));
 
@@ -207,7 +218,7 @@ class UpdateService {
                 label: 'GitHub Release',
                 subtitle: '全球分流 (备用线路)',
                 onTap: () => launchUrl(
-                  Uri.parse('https://github.com/tanpeng343-ui/-/releases'),
+                  Uri.parse('https://github.com/xunlys7930/AniMeow/releases'),
                   mode: LaunchMode.externalApplication,
                 ),
               ),
@@ -266,9 +277,9 @@ class UpdateService {
               ctx,
               icon: Icons.downloading,
               label: 'GitHub 更新地址',
-              subtitle: 'https://github.com/tanpeng343-ui/-',
+              subtitle: 'https://github.com/xunlys7930/AniMeow',
               onTap: () => launchUrl(
-                Uri.parse('https://github.com/tanpeng343-ui/-/releases'),
+                Uri.parse('https://github.com/xunlys7930/AniMeow/releases'),
                 mode: LaunchMode.externalApplication,
               ),
             ),

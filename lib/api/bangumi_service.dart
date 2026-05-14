@@ -106,7 +106,7 @@ class BangumiService {
 
   /// 请求头配置（包含 User-Agent）
   static final Map<String, String> _headers = {
-    'User-Agent': 'AnimeTracker/1.0 (Flutter App)',
+    'User-Agent': 'AniMeow/1.0 (Flutter; +https://github.com/xunlys7930/AniMeow)',
   };
 
   /// 搜索动画条目 (由于兼容性保留此方法名)
@@ -433,11 +433,14 @@ class BangumiService {
       if (year != null && year.isNotEmpty) queryParams['year'] = year;
       if (month != null && month.isNotEmpty) queryParams['month'] = month;
 
-      final uri = Uri.http(
-        '47.103.83.247:3000',
+      final uri = ApiConfig.cloudUri(
         '/api/search',
         queryParams.isNotEmpty ? queryParams : null,
       );
+      if (uri == null) {
+        logger.w('Get Server Animes: CLOUD_API_BASE 未配置');
+        return [];
+      }
 
       // 发送请求时带上 Token
       final response = await http.get(
@@ -501,7 +504,9 @@ class BangumiService {
     if (!coverUrl.startsWith('http')) return; // 仅推送网络地址
 
     try {
-      final url = Uri.http('47.103.83.247:3000', '/api/update_cover');
+      final url = ApiConfig.cloudUri('/api/update_cover');
+      if (url == null) return;
+
       final response = await http.post(
         url,
         headers: {

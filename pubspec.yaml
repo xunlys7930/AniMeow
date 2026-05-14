@@ -7,7 +7,7 @@ flutter_icons:
 
 
 name: anime_tracker
-description: "一个萌萌的二次元追番进度管理工具——追番喵。"
+description: "追番喵 AniMeow — 二次元追番进度管理工具。"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

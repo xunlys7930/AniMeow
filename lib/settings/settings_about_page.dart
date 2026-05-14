@@ -104,7 +104,7 @@ class _SettingsAboutPageState extends State<SettingsAboutPage> {
             child: Column(
               children: [
                 Text(
-                  "AnimeTracker",
+                  "AniMeow",
                   style: TextStyle(
                     color: Colors.grey[400],
                     fontSize: 14,

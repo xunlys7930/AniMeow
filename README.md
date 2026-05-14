@@ -1,8 +1,14 @@
-# 追番喵 (ZhuiFanMiao) 🐾
+# 追番喵 (AniMeow) 🐾
 
 一个萌萌的二次元追番进度管理工具，帮你优雅管理心爱的动漫、漫画、小说。
 
 ![Logo](assets/icon.png)
+
+**开源仓库**：[github.com/xunlys7930/AniMeow](https://github.com/xunlys7930/AniMeow)
+
+**官方维护的平台**：**Android**、**Windows**。本仓库仍带有 Flutter 默认生成的 iOS / macOS / Linux / Web 等目录，便于有需要的开发者自行编译或移植；**维护者不保证这些平台可编译、可运行或行为正确**，相关 PR 欢迎，但可能无法及时跟进。
+
+**对外品牌**：中文名「**追番喵**」，英文名 **AniMeow**。为兼容已安装用户，**未修改** Android `applicationId` / `namespace`（`com.example.anime_tracker`）、本地数据库文件名（`anime_tracker_v5.db`）、Windows 可执行文件名（`anime_tracker.exe`）；Windows「文件说明 / 产品名称」等元数据与界面文案已统一为 AniMeow。Dart 包名 `pubspec.yaml` 中的 `name: anime_tracker` 仅影响代码里的 `package:` import，可按需在未来大版本再议。macOS 工程产物目录名仍为 `anime_tracker.app`（与 Xcode 配置绑定），若需与 AniMeow 完全一致需另行调整工程文件。
 
 ## ✨ 特色功能
 
@@ -24,7 +30,7 @@
 - **State**: Provider + ValueNotifier
 - **Network**: http / dio
 - **UI**: Material 3 Expressive 设计系统
-- **平台**: Android、iOS、Windows（macOS / Linux 理论支持，未深度测试）
+- **官方支持平台**: Android、Windows（见上文说明；其余平台目录仅作社区自主使用）
 
 ## 🚀 快速开始
 
@@ -32,30 +38,36 @@
 
 - Flutter SDK ≥ 3.24
 - Dart SDK ≥ 3.5
-- 一台运行追番喵后端服务的服务器（见下方[后端部署](#-后端部署)）；如果只想跑客户端做本地体验，所有依赖云端的功能（云端资源发现、版本检查）会失效，但本地追番、统计、备份等都正常
+- 一台可选的自建后端（`app.js`）；若未部署或未在客户端配置 `CLOUD_API_BASE`，云端搜索、封面同步、检查更新等会不可用，但本地追番、统计、备份等都正常
 
 ### 客户端运行
 
 1. 克隆仓库
    ```bash
-   git clone https://github.com/tanpeng343-ui/anime_tracker.git
-   cd anime_tracker
+   git clone https://github.com/xunlys7930/AniMeow.git
+   cd AniMeow
    ```
 2. 安装依赖
    ```bash
    flutter pub get
    ```
-3. 运行（注意需要传入 `API_TOKEN`，与后端 `.env` 里的 `API_TOKEN` 必须一致）
+3. 运行（自建后端时，传入与服务器 `.env` 一致的 `API_TOKEN`，以及后端的对外根地址 `CLOUD_API_BASE`，不要带末尾 `/`）
    ```bash
-   flutter run --dart-define=API_TOKEN=your_token_here
+   flutter run \
+     --dart-define=CLOUD_API_BASE=https://your-api.example.com \
+     --dart-define=API_TOKEN=your_token_here
    ```
 4. 打包发布
    ```bash
    # Android
-   flutter build apk --release --dart-define=API_TOKEN=your_token_here
+   flutter build apk --release \
+     --dart-define=CLOUD_API_BASE=https://your-api.example.com \
+     --dart-define=API_TOKEN=your_token_here
 
    # Windows
-   flutter build windows --release --dart-define=API_TOKEN=your_token_here
+   flutter build windows --release \
+     --dart-define=CLOUD_API_BASE=https://your-api.example.com \
+     --dart-define=API_TOKEN=your_token_here
    ```
 
 为了避免每次手动输入，可以在 IDE 配置里固化。VS Code `.vscode/launch.json` 示例：
@@ -64,10 +76,13 @@
 {
   "configurations": [
     {
-      "name": "anime_tracker (debug)",
+      "name": "AniMeow (debug)",
       "request": "launch",
       "type": "dart",
-      "toolArgs": ["--dart-define=API_TOKEN=your_token_here"]
+      "toolArgs": [
+        "--dart-define=CLOUD_API_BASE=https://your-api.example.com",
+        "--dart-define=API_TOKEN=your_token_here"
+      ]
     }
   ]
 }
@@ -91,14 +106,21 @@
    ```
 3. 安装依赖并启动（建议用 [pm2](https://pm2.keymetrics.io/) 或 systemd 守护）
    ```bash
-   npm install express mysql2 axios dotenv
-   node app.js
+   npm install
+   npm start
    ```
-4. 把 `API_TOKEN` 同步给客户端构建命令（见上面的 `--dart-define`）
+4. 按需填写「检查更新」相关变量（见 `.env.example` 中 `UPDATE_*`）；不填则接口返回空版本，客户端不会提示升级
+5. 把 `API_TOKEN` 与后端的根地址通过 `--dart-define` 同步给客户端（见上文 `API_TOKEN`、`CLOUD_API_BASE`）
+
+可选：定时补全缺失封面（与主服务共用 `.env`）
+
+```bash
+npm run sync-covers
+```
 
 后端首次启动会自动建表（`animes`）。
 
-> 🚨 **重要**：`API_TOKEN` 必须用强随机字符串。可以用 `openssl rand -hex 32` 生成。
+> 🚨 **重要**：`API_TOKEN` 必须用强随机字符串。可以用 `openssl rand -hex 32` 生成。若你曾在旧版本把 token 写进仓库或默认值里，部署前请**轮换**为新 token。
 
 ## 📂 项目结构
 
@@ -115,7 +137,9 @@ lib/
 │   └── ...
 ├── utils/               # 工具（日志、API config、通知服务）
 └── ...
-app.js                   # 云端后端服务
+app.js                   # 云端后端服务（Express）
+server_sync_covers.js    # 可选：定时从 Bangumi 补全缺失封面
+package.json             # 后端 npm 依赖与脚本
 ```
 
 ## 🤝 贡献

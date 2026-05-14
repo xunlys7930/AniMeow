@@ -1,6 +1,6 @@
 {
-    "name": "anime_tracker",
-    "short_name": "anime_tracker",
+    "name": "追番喵 AniMeow",
+    "short_name": "AniMeow",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -31,7 +31,7 @@ class BackupService {
       // 使用应用缓存目录
       final tempDir = await getTemporaryDirectory();
       final String fileName =
-          'anime_backup_${DateTime.now().year}${DateTime.now().month}${DateTime.now().day}.zip';
+          'AniMeow_backup_${DateTime.now().year}${DateTime.now().month}${DateTime.now().day}.zip';
       final String zipPath = path.join(tempDir.path, fileName);
 
       // 创建压缩包

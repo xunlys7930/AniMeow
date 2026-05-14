@@ -66,7 +66,7 @@ class _ImageViewerPageState extends State<ImageViewerPage> {
           imageBytes,
           quality: 100,
           name: "cover_${DateTime.now().millisecondsSinceEpoch}.jpg",
-          androidRelativePath: "Pictures/AnimeTracker",
+          androidRelativePath: "Pictures/AniMeow",
           androidExistNotSave: false,
         );
 

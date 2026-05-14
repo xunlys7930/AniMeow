@@ -67,9 +67,10 @@ class ServerSearchPageState extends State<ServerSearchPage>
     });
 
     try {
-      final url = Uri.parse(
-        'http://47.103.83.247:3000/api/search?keyword=${Uri.encodeComponent(keyword)}',
-      );
+      final url = ApiConfig.cloudUri('/api/search', {'keyword': keyword});
+      if (url == null) {
+        throw Exception('未配置 CLOUD_API_BASE');
+      }
       // 发送请求时带上 Token
       final response = await http.get(
         url,
