@@ -1,0 +1,105 @@
+# ───────────────────────────────────────────────
+# Flutter / Dart
+# ───────────────────────────────────────────────
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+app.*.symbols
+app.*.map.json
+
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# ───────────────────────────────────────────────
+# IDE
+# ───────────────────────────────────────────────
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code 个人配置 / 含 token 的 launch 配置
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/settings.json
+
+# ───────────────────────────────────────────────
+# Windows Visual Studio / CMake 构建缓存
+# ───────────────────────────────────────────────
+windows/runner/.vs/
+windows/runner/out/
+
+# ───────────────────────────────────────────────
+# AI 工具本地配置（不应开源）
+# ───────────────────────────────────────────────
+.claude/
+.gemini/
+.cursor/
+.copilot/
+
+# ───────────────────────────────────────────────
+# 临时 / 调试 / 备份文件
+# ───────────────────────────────────────────────
+temp_response*.json
+project_code_backup.txt
+analyze_*.txt
+*.py
+extract_log.dart
+recover.dart
+progress_card.dart
+progress_card_full.dart
+
+# ───────────────────────────────────────────────
+# 后端 / 服务端脚本（仅 Flutter 客户端开源）
+# ───────────────────────────────────────────────
+app.js
+server_sync_covers.js
+
+# ───────────────────────────────────────────────
+# 密钥 / 环境变量
+# ───────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ───────────────────────────────────────────────
+# Node.js
+# ───────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ───────────────────────────────────────────────
+# 本地数据库 dump / 备份
+# ───────────────────────────────────────────────
+*.sqlite
+*.db-journal
+*.bak
+backup/
+
+# Sentry 本地缓存
+.sentry-native/
+
+# devtools 本地选项（个人偏好）
+devtools_options.yaml

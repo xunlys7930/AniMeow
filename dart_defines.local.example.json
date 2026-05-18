@@ -1,0 +1,4 @@
+{
+  "CLOUD_API_BASE": "http://YOUR_SERVER_HOST:3000",
+  "API_TOKEN": "replace_with_same_value_as_backend_dotenv_API_TOKEN"
+}
