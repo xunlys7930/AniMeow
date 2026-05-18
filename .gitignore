@@ -103,3 +103,7 @@ backup/
 
 # devtools 本地选项（个人偏好）
 devtools_options.yaml
+
+run.bat
+build_android.bat
+build_windows.bat
