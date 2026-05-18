@@ -80,7 +80,6 @@ server_sync_covers.js
 # ───────────────────────────────────────────────
 .env
 .env.*
-!.env.example
 
 # ───────────────────────────────────────────────
 # Node.js
@@ -108,3 +107,5 @@ devtools_options.yaml
 build_android.bat
 build_windows.bat
 run.bat
+push_github.bat
+push_gitee.bat

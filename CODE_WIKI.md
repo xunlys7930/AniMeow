@@ -185,9 +185,7 @@ anime_tracker/
 │   └── discovery_page.dart        # 发现页
 │
 ├── assets/                       # 静态资源
-│   ├── icon.png
-│   ├── alipay_qrcode.png
-│   └── wechat_qrcode.png
+│   └── icon.png
 │
 ├── android/                      # Android 平台代码
 ├── ios/                          # iOS 平台代码
@@ -196,11 +194,7 @@ anime_tracker/
 ├── linux/                        # Linux 平台代码
 ├── web/                          # Web 平台代码
 │
-├── app.js                        # Node.js 云端后端（可选）
-├── server_sync_covers.js         # 封面同步脚本
-├── package.json                  # 后端依赖
-├── pubspec.yaml                  # Flutter 依赖
-└── .env.example                  # 环境变量示例
+└── pubspec.yaml                  # Flutter 依赖
 ```
 
 ---
@@ -1019,22 +1013,13 @@ flutter build windows --release \
   --dart-define=API_TOKEN=your_token_here
 ```
 
-### 7.4 后端部署（可选）
+### 7.4 后端协议（自建参考）
 
-```bash
-# 1. 配置环境变量
-cp .env.example .env
-vi .env  # 填写 DB_PASSWORD / API_TOKEN
+本仓库仅开源 Flutter 客户端，配套云端代理服务不在开源范围。若要自建后端，参考 `lib/api/` 下的客户端实现按下列约定提供 HTTP 接口：
 
-# 2. 安装依赖
-npm install
-
-# 3. 启动服务
-npm start  # 或使用 pm2 守护进程
-
-# 4. 封面同步（可选）
-npm run sync-covers
-```
+- **鉴权**：`Authorization: Bearer <API_TOKEN>`，客户端通过 `--dart-define=API_TOKEN=...` 编译期注入同样的值
+- **根地址**：`--dart-define=CLOUD_API_BASE=https://your-api.example.com`（无末尾 `/`）
+- **接口形态**：参考 `bangumi_service.dart` / `anilist_service.dart` / `update_service.dart` 中 `Uri.parse('$base/api/...')` 的调用列表自行实现
 
 ### 7.5 IDE 配置（VS Code）
 
@@ -1082,8 +1067,6 @@ npm run sync-covers
 | 文件 | 说明 |
 |------|------|
 | pubspec.yaml | Flutter 依赖配置 |
-| package.json | Node.js 后端依赖配置 |
-| .env.example | 环境变量示例（后端） |
 | analysis_options.yaml | Dart 代码分析规则 |
 
 ### 8.3 资源目录
@@ -1091,8 +1074,6 @@ npm run sync-covers
 | 目录 | 说明 |
 |------|------|
 | assets/icon.png | 应用图标 |
-| assets/alipay_qrcode.png | 支付宝捐赠二维码 |
-| assets/wechat_qrcode.png | 微信捐赠二维码 |
 
 ### 8.4 许可证
 
