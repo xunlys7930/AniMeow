@@ -39,7 +39,7 @@ class CreditsPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          _buildDonateCard(context),
+          _buildCommunityCard(context),
           const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -87,7 +87,7 @@ class CreditsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDonateCard(BuildContext context) {
+  Widget _buildCommunityCard(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -103,7 +103,7 @@ class CreditsPage extends StatelessWidget {
                 Icon(Icons.pets, color: Colors.pinkAccent, size: 22),
                 SizedBox(width: 8),
                 Text(
-                  "投喂开发者",
+                  "加入我们",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -112,33 +112,13 @@ class CreditsPage extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-              "喜欢的话可以适量投喂开发者哦喵~ ฅ( ̳• ◡ • ̳)ฅ\n您的支持是本喵继续用爱发电的最大动力喵！",
+              "欢迎加入交流群一起讨论使用心得、反馈 Bug 或提出新想法喵~ ฅ( ̳• ◡ • ̳)ฅ",
               style: TextStyle(
                 color: Colors.grey[700],
                 fontSize: 14,
                 height: 1.5,
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildQRCodeItem(
-                context,
-                asset: 'assets/alipay_qrcode.png',
-                title: '支付宝',
-                icon: Icons.payments,
-                color: Colors.blue,
-              ),
-              _buildQRCodeItem(
-                context,
-                asset: 'assets/wechat_qrcode.png',
-                title: '微信支付',
-                icon: Icons.wechat,
-                color: Colors.green,
-              ),
-            ],
           ),
           const SizedBox(height: 16),
           const Divider(height: 1, endIndent: 20, indent: 20),
@@ -183,74 +163,6 @@ class CreditsPage extends StatelessWidget {
           const SizedBox(height: 4),
         ],
       ),
-    );
-  }
-
-  Widget _buildQRCodeItem(
-    BuildContext context, {
-    required String asset,
-    required String title,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(
-          width: 130,
-          height: 130,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withValues(alpha: 0.15),
-                spreadRadius: 2,
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-            border: Border.all(color: Colors.grey[200]!, width: 1),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.asset(
-              asset,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.qr_code_2, size: 40, color: Colors.grey[400]),
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                    child: Text(
-                      "待添加\n$asset",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey[500], fontSize: 10),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 

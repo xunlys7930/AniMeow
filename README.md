@@ -42,7 +42,7 @@
 
 - Flutter SDK ≥ 3.24
 - Dart SDK ≥ 3.5
-- 一台可选的自建后端（`app.js`）；若未部署或未在客户端配置 `CLOUD_API_BASE`，云端搜索、封面同步、检查更新等会不可用，但本地追番、统计、备份等都正常
+- 一个可选的云端代理后端（**本仓库不开源**，需自行实现，见下文「后端协议」）；若未部署或未在客户端配置 `CLOUD_API_BASE`，云端搜索、封面同步、检查更新等会不可用，但本地追番、统计、备份等都正常
 
 ### 客户端运行
 
@@ -55,7 +55,7 @@
    ```bash
    flutter pub get
    ```
-3. 运行（自建后端时，传入与服务器 `.env` 一致的 `API_TOKEN`，以及后端的对外根地址 `CLOUD_API_BASE`，不要带末尾 `/`）
+3. 运行（自建后端时，把后端发的 `API_TOKEN` 与对外根地址 `CLOUD_API_BASE` 一起注入，不要带末尾 `/`）
    ```bash
    flutter run \
      --dart-define=CLOUD_API_BASE=https://your-api.example.com \
@@ -92,39 +92,15 @@
 }
 ```
 
-## 🌐 后端部署
+## 🌐 后端协议（自建参考）
 
-仓库根目录的 `app.js` 是 Node.js + Express + MySQL 实现的云端代理后端，负责：
+本仓库**只开源 Flutter 客户端**，配套的云端代理服务**不在开源范围内**。若你想搭建一个能与本客户端配合的后端，可以参考 `lib/api/` 下的客户端实现，按下列约定提供 HTTP 接口即可：
 
-- 抓取 Bangumi / AniList 的番剧元数据
-- 提供云端搜索 / 资源发现 / 封面同步
-- 客户端版本检查
+- **鉴权**：所有 `/api/*` 接口走 `Authorization: Bearer <API_TOKEN>` 头。客户端通过 `--dart-define=API_TOKEN=...` 在编译期注入同样的值。
+- **根地址**：客户端通过 `--dart-define=CLOUD_API_BASE=https://your-api.example.com` 指定，不要带末尾 `/`。
+- **接口集合**：参考 `lib/api/bangumi_service.dart`、`lib/api/anilist_service.dart`、`lib/api/update_service.dart` 中的 `Uri.parse('$base/api/...')` 调用，按需实现云端搜索、封面同步、检查更新等。
 
-### 部署步骤
-
-1. 准备一台能跑 Node.js 18+ 和 MySQL 8.x 的服务器
-2. 复制并填好环境变量
-   ```bash
-   cp .env.example .env
-   vi .env  # 把 DB_PASSWORD / API_TOKEN 填进去
-   ```
-3. 安装依赖并启动（建议用 [pm2](https://pm2.keymetrics.io/) 或 systemd 守护）
-   ```bash
-   npm install
-   npm start
-   ```
-4. 按需填写「检查更新」相关变量（见 `.env.example` 中 `UPDATE_*`）；不填则接口返回空版本，客户端不会提示升级
-5. 把 `API_TOKEN` 与后端的根地址通过 `--dart-define` 同步给客户端（见上文 `API_TOKEN`、`CLOUD_API_BASE`）
-
-可选：定时补全缺失封面（与主服务共用 `.env`）
-
-```bash
-npm run sync-covers
-```
-
-后端首次启动会自动建表（`animes`）。
-
-> 🚨 **重要**：`API_TOKEN` 必须用强随机字符串。可以用 `openssl rand -hex 32` 生成。若你曾在旧版本把 token 写进仓库或默认值里，部署前请**轮换**为新 token。
+> 🚨 **重要**：`API_TOKEN` 一旦在客户端编译期注入，相当于打进了 APK / EXE。请保证它是强随机字符串（`openssl rand -hex 32`），并避免把它写进任何会被 commit 到公开仓库的脚本中。
 
 ## 📂 项目结构
 
@@ -141,9 +117,6 @@ lib/
 │   └── ...
 ├── utils/               # 工具（日志、API config、通知服务）
 └── ...
-app.js                   # 云端后端服务（Express）
-server_sync_covers.js    # 可选：定时从 Bangumi 补全缺失封面
-package.json             # 后端 npm 依赖与脚本
 ```
 
 ## 🤝 贡献
