@@ -104,6 +104,7 @@ backup/
 # devtools 本地选项（个人偏好）
 devtools_options.yaml
 
-run.bat
+# 忽略本地构建脚本
 build_android.bat
 build_windows.bat
+run.bat
