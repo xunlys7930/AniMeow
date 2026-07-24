@@ -4,6 +4,7 @@ import '../../components/status_badge.dart';
 import '../../design_tokens.dart';
 import '../home_layout.dart';
 import 'rating_icon.dart';
+import '../../../utils/anime_rating.dart';
 
 /// 横向布局的番剧卡片（左封面 + 右信息）
 ///
@@ -36,8 +37,10 @@ class AnimeListCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final dim = _CardDimensions.fromSize(size);
+    final coverRadius = props.coverBorderRadius;
     final status = (item['status'] ?? '').toString();
     final statusColor = props.statusColors[status] ?? Colors.grey;
+    final rating = animeRatingOf(item);
 
     return GestureDetector(
       onTap: () => props.onItemTap(item),
@@ -49,7 +52,7 @@ class AnimeListCard extends StatelessWidget {
           color: props.isSelectionMode && _isSelected
               ? colorScheme.primaryContainer.withValues(alpha: 0.4)
               : colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(coverRadius),
           border: props.isSelectionMode && _isSelected
               ? Border.all(color: colorScheme.primary, width: 2)
               : null,
@@ -118,11 +121,8 @@ class AnimeListCard extends StatelessWidget {
                                   : '漫画',
                               color: colorScheme.onSurfaceVariant,
                             ),
-                          if (props.showRating &&
-                              (item['rating'] is num) &&
-                              (item['rating'] as num) > 0)
-                            _RatingChip(
-                                rating: (item['rating'] as num).toDouble()),
+                          if (props.showRating && rating.hasValue)
+                            _RatingChip(label: rating.label),
                         ],
                       ],
                     ),
@@ -240,8 +240,8 @@ class _MiniChip extends StatelessWidget {
 }
 
 class _RatingChip extends StatelessWidget {
-  final double rating;
-  const _RatingChip({required this.rating});
+  final String label;
+  const _RatingChip({required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -257,7 +257,7 @@ class _RatingChip extends StatelessWidget {
           const RatingIconWidget(size: 12),
           const SizedBox(width: 2),
           Text(
-            rating.toStringAsFixed(1),
+            label,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,

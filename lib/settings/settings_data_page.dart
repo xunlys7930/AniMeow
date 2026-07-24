@@ -1,11 +1,12 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../db/database_helper.dart';
-import '../excel_import_page.dart';
+import '../ui/pages/bangumi_import_page.dart';
+import '../ui/pages/excel_import_page.dart';
 import '../backup_service.dart';
-import '../status_management_page.dart';
-import '../series_management_page.dart';
-import '../tag_management_page.dart';
+import '../ui/pages/status_management_page.dart';
+import '../ui/pages/series_management_page.dart';
+import '../ui/pages/tag_management_page.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel_pkg;
 import 'dart:typed_data';
@@ -96,6 +97,23 @@ class SettingsDataPage extends StatelessWidget {
               subtitle: "从备份文件还原数据",
               onTap: () =>
                   BackupService.importData(context, onDatabaseRefresh ?? () {}),
+            ),
+            _buildDivider(),
+            _buildDataTile(
+              context,
+              icon: Icons.cloud_download_outlined,
+              color: Colors.pink,
+              title: "Bangumi 导入",
+              subtitle: "从公开收藏批量导入番剧",
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BangumiImportPage(),
+                  ),
+                );
+                if (result == true) onDatabaseRefresh?.call();
+              },
             ),
             _buildDivider(),
             _buildDataTile(

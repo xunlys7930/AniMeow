@@ -13,11 +13,7 @@ class HeaderModule extends StatelessWidget {
   /// 是否在 dashboard 模式下使用更紧凑的字号
   final bool compact;
 
-  const HeaderModule({
-    super.key,
-    required this.props,
-    this.compact = false,
-  });
+  const HeaderModule({super.key, required this.props, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +60,7 @@ class HeaderModule extends StatelessWidget {
           spacing: 6,
           runSpacing: 6,
           children: [
-            _SubjectTypeChip(isAnime: props.isAnime),
+            _SubjectTypeChip(profile: props.subjectProfile),
             if (props.seriesName != null && props.seriesName!.isNotEmpty)
               Material(
                 color: Colors.transparent,
@@ -72,8 +68,10 @@ class HeaderModule extends StatelessWidget {
                   onTap: props.onSeriesTap,
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: cs.secondaryContainer,
                       borderRadius: BorderRadius.circular(8),
@@ -105,9 +103,13 @@ class HeaderModule extends StatelessWidget {
               ),
           ],
         ),
-        if (props.rating > 0) ...[
+        if (props.hasRating) ...[
           const SizedBox(height: 12),
-          RatingDisplay(rating: props.rating, color: cs.primary),
+          RatingDisplay(
+            rating: props.rating,
+            grade: props.ratingGrade,
+            color: cs.primary,
+          ),
         ],
       ],
     );
@@ -115,12 +117,12 @@ class HeaderModule extends StatelessWidget {
 }
 
 class _SubjectTypeChip extends StatelessWidget {
-  final bool isAnime;
-  const _SubjectTypeChip({required this.isAnime});
+  final DetailSubjectProfile profile;
+  const _SubjectTypeChip({required this.profile});
 
   @override
   Widget build(BuildContext context) {
-    final color = isAnime ? Colors.blue : Colors.teal;
+    final color = profile.isAnime ? Colors.blue : Colors.teal;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -132,13 +134,15 @@ class _SubjectTypeChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isAnime ? Icons.movie_filter_outlined : Icons.menu_book_rounded,
+            profile.isAnime
+                ? Icons.movie_filter_outlined
+                : Icons.menu_book_rounded,
             size: 13,
             color: color,
           ),
           const SizedBox(width: 4),
           Text(
-            isAnime ? '番剧' : '漫画 / 小说',
+            profile.typeLabel,
             style: TextStyle(
               fontSize: 12,
               color: color,
@@ -154,6 +158,7 @@ class _SubjectTypeChip extends StatelessWidget {
 /// 评分展示（5 颗星 + 数值）
 class RatingDisplay extends StatelessWidget {
   final double rating; // 0~10
+  final String? grade;
   final Color color;
   final double iconSize;
   final double textSize;
@@ -161,6 +166,7 @@ class RatingDisplay extends StatelessWidget {
   const RatingDisplay({
     super.key,
     required this.rating,
+    this.grade,
     required this.color,
     this.iconSize = 18,
     this.textSize = 16,
@@ -168,6 +174,28 @@ class RatingDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (grade != null) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.grade_rounded, color: color, size: iconSize),
+          const SizedBox(width: 6),
+          Text(
+            grade!,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w900,
+              fontSize: textSize + 2,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '等级',
+            style: TextStyle(color: color, fontSize: textSize - 2),
+          ),
+        ],
+      );
+    }
     // 0~10 → 0~5 颗星
     final stars5 = rating / 2;
     return Row(

@@ -6,12 +6,12 @@ import 'package:flutter/rendering.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-/// 跨平台图片裁剪页（纯 Flutter，安卓/iOS/Windows/桌面 都能用）
+/// 跨平台图片裁剪页（纯 Flutter，Android/iOS/Windows/桌面都能用）
 ///
 /// 实现思路：
 /// - 把原图放进 [InteractiveViewer] 内，用户用双指或鼠标滚轮缩放、拖动来取景
 /// - 外层用 [AspectRatio] + [ClipRect] 限定取景框比例
-/// - 用 [RepaintBoundary.toImage] 把当前可见区域整张栅格化为 PNG，保存到临时文件
+/// - 用 [RepaintBoundary.toImage] 把当前可见区域栅格化为 PNG，保存到临时文件
 ///
 /// 输出：临时 PNG 路径（用户的回调里通常会把它复制到永久目录）；
 /// 取消则返回 null。
@@ -19,7 +19,7 @@ class ImageCropPage extends StatefulWidget {
   /// 待裁剪的源图绝对路径
   final String imagePath;
 
-  /// 裁剪框宽高比；null 表示使用当前屏幕宽高比
+  /// 裁剪框宽高比，null 表示使用当前屏幕宽高比
   final double? aspectRatio;
 
   /// AppBar 标题
@@ -78,9 +78,9 @@ class _ImageCropPageState extends State<ImageCropPage> {
       if (mounted) Navigator.of(context).pop(outPath);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('裁剪失败：$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('裁剪失败：$e')));
         setState(() => _isProcessing = false);
       }
     }
@@ -157,12 +157,13 @@ class _ImageCropPageState extends State<ImageCropPage> {
                               transformationController: _ctrl,
                               minScale: 0.8,
                               maxScale: 6.0,
-                              boundaryMargin:
-                                  const EdgeInsets.all(double.infinity),
+                              boundaryMargin: const EdgeInsets.all(
+                                double.infinity,
+                              ),
                               clipBehavior: Clip.none,
                               child: Image.file(
                                 File(widget.imagePath),
-                                // contain：让用户看到完整原图，再缩放/拖动选取保留区
+                                // contain: 保证图片完整显示
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stack) {
                                   return Container(
@@ -170,8 +171,7 @@ class _ImageCropPageState extends State<ImageCropPage> {
                                     alignment: Alignment.center,
                                     child: const Text(
                                       '图片加载失败',
-                                      style:
-                                          TextStyle(color: Colors.white70),
+                                      style: TextStyle(color: Colors.white70),
                                     ),
                                   );
                                 },
@@ -180,10 +180,8 @@ class _ImageCropPageState extends State<ImageCropPage> {
                           ),
                         ),
                       ),
-                      // 取景框边框（用 IgnorePointer 不抢手势）
-                      const IgnorePointer(
-                        child: _CropOverlay(),
-                      ),
+                      // 裁剪框边框，用 IgnorePointer 避免阻挡手势
+                      const IgnorePointer(child: _CropOverlay()),
                     ],
                   ),
                 ),
@@ -213,10 +211,7 @@ class _CropOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _CropOverlayPainter(),
-      size: Size.infinite,
-    );
+    return CustomPaint(painter: _CropOverlayPainter(), size: Size.infinite);
   }
 }
 

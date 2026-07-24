@@ -32,7 +32,7 @@ class _MinimalLayoutState extends State<MinimalLayout> {
             children: [
               // 封面
               ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(p.coverBorderRadius),
                 child: SizedBox(
                   width: 200,
                   height: 280,
@@ -59,10 +59,7 @@ class _MinimalLayoutState extends State<MinimalLayout> {
                 const SizedBox(height: 6),
                 Text(
                   p.airDate,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: cs.onSurfaceVariant,
-                  ),
+                  style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
                 ),
               ],
               const SizedBox(height: 16),
@@ -92,11 +89,12 @@ class _MinimalLayoutState extends State<MinimalLayout> {
                         ),
                       ),
                     ),
-                  if (p.status.isNotEmpty && p.rating > 0)
+                  if (p.status.isNotEmpty && p.hasRating)
                     const SizedBox(width: 12),
-                  if (p.rating > 0)
+                  if (p.hasRating)
                     RatingDisplay(
                       rating: p.rating,
+                      grade: p.ratingGrade,
                       color: cs.primary,
                       iconSize: 18,
                       textSize: 16,

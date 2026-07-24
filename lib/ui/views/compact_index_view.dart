@@ -10,6 +10,7 @@ import '../design_tokens.dart';
 import '_shared/rating_icon.dart';
 import 'home_layout.dart';
 import '_shared/anime_swipe_actions.dart';
+import '../../utils/anime_rating.dart';
 
 /// 紧凑索引（Notion-like 列表 + 拼音字母锚点）
 ///
@@ -120,10 +121,7 @@ class _CompactIndexViewState extends State<CompactIndexView> {
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
             SizedBox(height: 200),
-            EmptyStateWidget(
-              message: '还没添加番剧',
-              buttonText: '去添加一部吧',
-            ),
+            EmptyStateWidget(message: '还没添加番剧', buttonText: '去添加一部吧'),
           ],
         ),
       );
@@ -145,6 +143,7 @@ class _CompactIndexViewState extends State<CompactIndexView> {
         },
         child: ListView.builder(
           controller: _scrollController,
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: EdgeInsets.only(
             bottom: AppSpacing.xxl * 2,
             // 给右侧字母条让出 24dp 触控宽度
@@ -227,7 +226,8 @@ class _FlatEntry {
 
   const _FlatEntry._({this.letter, this.item});
   factory _FlatEntry.header(String letter) => _FlatEntry._(letter: letter);
-  factory _FlatEntry.item(Map<String, dynamic> item) => _FlatEntry._(item: item);
+  factory _FlatEntry.item(Map<String, dynamic> item) =>
+      _FlatEntry._(item: item);
 
   bool get isHeader => letter != null;
 }
@@ -288,10 +288,7 @@ class _AlphabetRail extends StatelessWidget {
             onTap: () => onTap(letter),
             customBorder: const CircleBorder(),
             child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 2,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               child: Text(
                 letter,
                 style: TextStyle(
@@ -328,6 +325,7 @@ class _CompactItem extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final status = (item['status'] ?? '').toString();
     final statusColor = props.statusColors[status] ?? Colors.grey;
+    final rating = animeRatingOf(item);
 
     return InkWell(
       onTap: () => props.onItemTap(item),
@@ -343,7 +341,7 @@ class _CompactItem extends StatelessWidget {
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadius.xs),
+              borderRadius: BorderRadius.circular(props.coverBorderRadius),
               child: SizedBox(
                 width: 48,
                 height: 64,
@@ -364,8 +362,8 @@ class _CompactItem extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   const SizedBox(height: 2),
                   Row(
@@ -373,7 +371,8 @@ class _CompactItem extends StatelessWidget {
                       if (_isSeries)
                         Text(
                           '系列 · ${item['anime_count'] ?? 0} 部',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
                                 color: colorScheme.tertiary,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -390,12 +389,8 @@ class _CompactItem extends StatelessWidget {
                           const SizedBox(width: AppSpacing.sm),
                           Text(
                             props.progressTextOf(item),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: colorScheme.onSurfaceVariant,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ],
@@ -404,10 +399,7 @@ class _CompactItem extends StatelessWidget {
                 ],
               ),
             ),
-            if (!_isSeries &&
-                props.showRating &&
-                (item['rating'] is num) &&
-                (item['rating'] as num) > 0) ...[
+            if (!_isSeries && props.showRating && rating.hasValue) ...[
               const SizedBox(width: AppSpacing.sm),
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -415,7 +407,7 @@ class _CompactItem extends StatelessWidget {
                   const RatingIconWidget(size: 12),
                   const SizedBox(width: 2),
                   Text(
-                    (item['rating'] as num).toStringAsFixed(1),
+                    rating.label,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
@@ -450,6 +442,7 @@ class _CompactItem extends StatelessWidget {
 
   Widget _buildThumbnail(BuildContext context) {
     final coverUrl = item['cover_url'] as String?;
+    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
     final fallback = Container(
       color: Theme.of(context).colorScheme.surfaceContainerHigh,
       child: Icon(
@@ -464,7 +457,7 @@ class _CompactItem extends StatelessWidget {
       return CachedNetworkImage(
         imageUrl: coverUrl,
         fit: BoxFit.cover,
-        memCacheWidth: 96,
+        memCacheWidth: (96 * pixelRatio).toInt(),
         placeholder: (_, _) => Container(
           color: Theme.of(context).colorScheme.surfaceContainerHigh,
         ),
@@ -481,7 +474,7 @@ class _CompactItem extends StatelessWidget {
     return Image.file(
       f,
       fit: BoxFit.cover,
-      cacheWidth: 96,
+      cacheWidth: (96 * pixelRatio).toInt(),
       errorBuilder: (_, _, _) => fallback,
     );
   }

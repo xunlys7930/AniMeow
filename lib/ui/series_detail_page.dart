@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -8,6 +8,7 @@ import '../db/database_helper.dart';
 import 'anime_detail/anime_detail_page.dart';
 import '../api/bangumi_service.dart';
 import '../api/anilist_service.dart';
+import '../settings_manager.dart';
 
 part 'series_detail_page_ui.dart';
 
@@ -162,7 +163,9 @@ class _SeriesDetailPageState extends State<SeriesDetailPage> {
               return GestureDetector(
                 onTap: () => Navigator.pop(ctx, anime['cover_url']),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(
+                    SettingsManager().coverBorderRadiusNotifier.value,
+                  ),
                   child: _buildCoverImage(anime['cover_url']),
                 ),
               );

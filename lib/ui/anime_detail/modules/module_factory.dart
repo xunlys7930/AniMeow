@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../detail_layout.dart';
 import '../detail_props.dart';
+import 'characters_module.dart';
 import 'detail_meta_module.dart';
 import 'reminder_module.dart';
 import 'review_module.dart';
@@ -27,5 +28,7 @@ Widget buildDetailModule(DetailModule module, DetailViewProps props) {
       return ReminderModule(props: props);
     case DetailModule.siblings:
       return SiblingsModule(props: props);
+    case DetailModule.characters:
+      return CharactersModule(props: props);
   }
 }

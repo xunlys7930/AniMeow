@@ -4,8 +4,9 @@ import 'poster_wall_view.dart';
 import 'card_feed_view.dart';
 import 'bento_home_view.dart';
 import 'compact_index_view.dart';
+import 'recommend_grid_view.dart';
 
-/// 首页布局模式枚举（4 选 1）
+/// 首页布局模式枚举（5 选 1）
 ///
 /// 替换旧的 `viewMode: 'poster'|'card'` 字符串。
 /// 老用户旧值会在 `SettingsManager.loadSettings()` 中自动迁移：
@@ -24,7 +25,10 @@ enum HomeLayout {
   posterWall,
 
   /// 紧凑索引（缩略 + 拼音锚点）
-  compactIndex;
+  compactIndex,
+
+  /// 推荐宫格（多列封面推荐流，角标样式跟随封面设置）
+  recommendGrid;
 
   /// 用于显示的中文名
   String get label {
@@ -37,6 +41,8 @@ enum HomeLayout {
         return '沉浸海报墙';
       case HomeLayout.compactIndex:
         return '紧凑索引';
+      case HomeLayout.recommendGrid:
+        return '推荐宫格';
     }
   }
 
@@ -51,6 +57,8 @@ enum HomeLayout {
         return '无文字干扰的封面墙';
       case HomeLayout.compactIndex:
         return '高密度文本列表，超大库适用';
+      case HomeLayout.recommendGrid:
+        return '多列封面宫格，适合快速浏览';
     }
   }
 
@@ -65,6 +73,8 @@ enum HomeLayout {
         return Icons.grid_view_rounded;
       case HomeLayout.compactIndex:
         return Icons.list_rounded;
+      case HomeLayout.recommendGrid:
+        return Icons.apps_rounded;
     }
   }
 
@@ -79,6 +89,8 @@ enum HomeLayout {
         return 'posterWall';
       case HomeLayout.compactIndex:
         return 'compactIndex';
+      case HomeLayout.recommendGrid:
+        return 'recommendGrid';
     }
   }
 
@@ -105,55 +117,56 @@ enum HomeLayout {
   }
 }
 
-/// 首页封面的评分/状态角标样式（4 选 1）
+/// 首页封面的信息层样式。
 ///
-/// 仅影响 [AnimePosterCard] 渲染（海报墙、Bento Grid 区段、其他海报式卡片）。
-/// 列表式卡片 [AnimeListCard] 和紧凑索引把信息放在文字区，不受此项控制。
+/// 样式只负责“信息如何排版”，显示哪些信息由
+/// [HomeViewProps.showCoverStatus] 等独立开关决定。这样用户可以在保持
+/// 视觉秩序的同时，自由组合状态、评分、进度和作品类型。
 enum BadgeStyle {
-  /// 状态/评分胶囊距封面边缘 8px，圆角悬浮（v1 行为）
-  floating,
+  /// 一块统一的半透明信息面板，适合日常浏览。
+  overlay,
 
-  /// 紧贴封面四角，外侧切平、内侧保留圆角
-  flush,
+  /// 左右角标分区，封面本身保持最干净。
+  corners,
 
-  /// 移除四角胶囊，合并为底部一条信息带（状态色块 + 评分）
+  /// 底部整条信息栏，适合需要快速扫读状态和进度的用户。
   bottomBar,
 
-  /// 极简：状态用小角块、评分用纯文字带阴影
+  /// 只保留点、数字和细进度线，干扰最少。
   minimal;
 
   String get label {
     switch (this) {
-      case BadgeStyle.floating:
-        return '悬浮显示';
-      case BadgeStyle.flush:
-        return '贴边显示';
+      case BadgeStyle.overlay:
+        return '统一信息面板';
+      case BadgeStyle.corners:
+        return '双角分区';
       case BadgeStyle.bottomBar:
         return '底部信息条';
       case BadgeStyle.minimal:
-        return '角标极简';
+        return '极简标记';
     }
   }
 
   String get description {
     switch (this) {
-      case BadgeStyle.floating:
-        return '胶囊浮在封面上，与边缘留出 8px 间距';
-      case BadgeStyle.flush:
-        return '与封面边缘对齐，仅保留内侧圆角';
+      case BadgeStyle.overlay:
+        return '把状态、进度和评分收进一块半透明面板';
+      case BadgeStyle.corners:
+        return '状态在左上、评分在右上，底部留给标题';
       case BadgeStyle.bottomBar:
-        return '底部一条信息带，整合状态与评分';
+        return '底部整条信息带，适合高密度浏览';
       case BadgeStyle.minimal:
-        return '小角块 + 纯文字，干扰最少';
+        return '只保留必要的点、数字和细线';
     }
   }
 
   String get persistKey {
     switch (this) {
-      case BadgeStyle.floating:
-        return 'floating';
-      case BadgeStyle.flush:
-        return 'flush';
+      case BadgeStyle.overlay:
+        return 'overlay';
+      case BadgeStyle.corners:
+        return 'corners';
       case BadgeStyle.bottomBar:
         return 'bottomBar';
       case BadgeStyle.minimal:
@@ -162,20 +175,38 @@ enum BadgeStyle {
   }
 
   static BadgeStyle fromPersistKey(String? key) {
-    if (key == null) return BadgeStyle.floating;
-    return values.firstWhere(
-      (e) => e.persistKey == key,
-      orElse: () => BadgeStyle.floating,
-    );
+    // 兼容早期版本的 six-style key：旧样式迁移到最接近的基础样式，
+    // 不会让升级后的用户突然得到一个空白设置。
+    switch (key) {
+      case 'floating':
+        return BadgeStyle.overlay;
+      case 'flush':
+        return BadgeStyle.corners;
+      case 'blueRibbon':
+      case 'scoreTitleBar':
+        return BadgeStyle.bottomBar;
+      case 'corners':
+        return BadgeStyle.corners;
+      case 'bottomBar':
+        return BadgeStyle.bottomBar;
+      case 'minimal':
+        return BadgeStyle.minimal;
+      case 'overlay':
+      default:
+        return BadgeStyle.overlay;
+    }
   }
 }
 
-/// 4 种布局共享的渲染参数
+/// 首页布局共享的渲染参数
 ///
 /// [AnimeListPage] 把数据和回调打包成此对象，交给布局工厂 [buildHomeView] 分发。
 class HomeViewProps {
   /// 当前分页显示的 item 列表（混合 'anime' / 'series' 两种 type）
   final List<Map<String, dynamic>> items;
+
+  /// 当前筛选条件下的完整条目数，不受首页分页大小影响。
+  final int totalItemCount;
 
   /// 状态色映射（来自 watch_statuses 表）
   final Map<String, Color> statusColors;
@@ -204,11 +235,23 @@ class HomeViewProps {
   /// 是否还有更多分页可加载
   final bool hasMore;
 
-  /// 海报墙模式专用：列数（2~5）
+  /// 首页宫格偏好列数（2~5；窄窗口会自动取可容纳的最大值）
   final int gridColumns;
 
   /// 海报墙模式专用：标题位置（'on_cover' / 'below_cover'）
   final String titlePosition;
+
+  /// 封面圆角（逻辑像素）
+  final double coverBorderRadius;
+
+  /// 封面角标大小缩放
+  final double badgeScale;
+
+  /// 封面信息面板透明度
+  final double badgeOpacity;
+
+  /// 封面信息面板圆角
+  final double badgeRadius;
 
   /// 显隐开关：标题
   final bool showTitle;
@@ -228,6 +271,21 @@ class HomeViewProps {
   /// 封面角标样式（影响 [AnimePosterCard]）
   final BadgeStyle badgeStyle;
 
+  /// 封面上是否显示状态文字/状态点
+  final bool showCoverStatus;
+
+  /// 封面上是否显示评分
+  final bool showCoverRating;
+
+  /// 封面上是否显示观看进度
+  final bool showCoverProgress;
+
+  /// 封面上是否显示作品类型图标
+  final bool showCoverType;
+
+  /// 系列封面上是否显示作品数量
+  final bool showCoverSeriesCount;
+
   /// 主筛选状态（'全部' / '在看' / '看完' / ...）
   /// Bento 用它判断是否展开 smart sections
   final String selectedStatus;
@@ -245,6 +303,7 @@ class HomeViewProps {
 
   const HomeViewProps({
     required this.items,
+    required this.totalItemCount,
     required this.statusColors,
     required this.appDocDir,
     required this.isSelectionMode,
@@ -256,12 +315,21 @@ class HomeViewProps {
     required this.hasMore,
     required this.gridColumns,
     required this.titlePosition,
+    required this.coverBorderRadius,
+    required this.badgeScale,
+    required this.badgeOpacity,
+    required this.badgeRadius,
     required this.showTitle,
     required this.showRating,
     required this.showProgress,
     required this.showStatus,
     required this.showSubjectType,
     required this.badgeStyle,
+    required this.showCoverStatus,
+    required this.showCoverRating,
+    required this.showCoverProgress,
+    required this.showCoverType,
+    required this.showCoverSeriesCount,
     required this.selectedStatus,
     required this.isInDefaultMode,
     required this.isSortedByPinyin,
@@ -285,5 +353,7 @@ Widget buildHomeView(HomeLayout layout, HomeViewProps props) {
       return PosterWallView(props: props);
     case HomeLayout.compactIndex:
       return CompactIndexView(props: props);
+    case HomeLayout.recommendGrid:
+      return RecommendGridView(props: props);
   }
 }

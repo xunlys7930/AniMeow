@@ -466,7 +466,7 @@ SettingsManager 是应用设置的核心管理单例，负责设置的加载、�
 | `showCalendarNotifier` | `bool` | true | 显示日历入口 |
 | `showStatisticsNotifier` | `bool` | true | 显示统计入口 |
 | `showDiscoveryNotifier` | `bool` | true | 显示发现入口 |
-| `showServerSearchNotifier` | `bool` | false | 显示资源库入口 |
+| `showServerSearchNotifier` | `bool` | false | 显示资料库入口 |
 | `autoSaveDetailNotifier` | `bool` | false | 详情页自动保存 |
 | `lastSelectedStatusNotifier` | `String` | '全部' | 上次选择状态 |
 | `defaultStartStatusNotifier` | `String` | '上次退出前' | 启动默认状态 |
@@ -977,7 +977,7 @@ class NotificationService {
 
 - Flutter SDK ≥ 3.24
 - Dart SDK ≥ 3.5
-- Node.js 18+（仅后端部署）
+- Node.js 20+（仅后端部署）
 - MySQL 8.x（仅后端部署）
 
 ### 7.2 客户端运行
@@ -1013,9 +1013,9 @@ flutter build windows --release \
   --dart-define=API_TOKEN=your_token_here
 ```
 
-### 7.4 后端协议（自建参考）
+### 7.4 后端部署与协议（自建参考）
 
-本仓库仅开源 Flutter 客户端，配套云端代理服务不在开源范围。若要自建后端，参考 `lib/api/` 下的客户端实现按下列约定提供 HTTP 接口：
+仓库 `backend/` 包含经过脱敏的 Node.js + MySQL 参考实现。部署前复制 `backend/.env.example` 为 `backend/.env`，填写独立随机密钥并执行 `npm install && npm start`；详细安全要求见 `backend/README.md`。
 
 - **鉴权**：`Authorization: Bearer <API_TOKEN>`，客户端通过 `--dart-define=API_TOKEN=...` 编译期注入同样的值
 - **根地址**：`--dart-define=CLOUD_API_BASE=https://your-api.example.com`（无末尾 `/`）

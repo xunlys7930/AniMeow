@@ -1,4 +1,4 @@
-﻿part of 'series_detail_page.dart';
+part of 'series_detail_page.dart';
 
 extension _SeriesDetailPageStateUI on _SeriesDetailPageState {
   Widget _buildSelectionActionBar() {
@@ -134,6 +134,7 @@ extension _SeriesDetailPageStateUI on _SeriesDetailPageState {
   Widget _buildAnimeCard(Map<String, dynamic> anime) {
     final id = anime['id'];
     final isSelected = _selectedIds.contains(id);
+    final coverBorderRadius = SettingsManager().coverBorderRadiusNotifier.value;
 
     return GestureDetector(
       onTap: () async {
@@ -158,7 +159,7 @@ extension _SeriesDetailPageStateUI on _SeriesDetailPageState {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(coverBorderRadius),
           border: _isSelectionMode && isSelected
               ? Border.all(color: Theme.of(context).primaryColor, width: 3)
               : null,
@@ -174,7 +175,7 @@ extension _SeriesDetailPageStateUI on _SeriesDetailPageState {
           margin: EdgeInsets.zero,
           clipBehavior: Clip.antiAlias,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(coverBorderRadius),
           ),
           elevation: 0,
           child: Column(
@@ -196,7 +197,9 @@ extension _SeriesDetailPageStateUI on _SeriesDetailPageState {
                     ),
                     if (_isSelectionMode && isSelected)
                       Container(
-                        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).primaryColor.withValues(alpha: 0.1),
                         child: Center(
                           child: Icon(
                             Icons.check_circle,

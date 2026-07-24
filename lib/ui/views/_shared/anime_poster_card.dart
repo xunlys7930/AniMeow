@@ -1,40 +1,29 @@
 import 'package:flutter/material.dart';
-import '../../../settings_manager.dart';
+
+import '../../../utils/anime_rating.dart';
 import '../../components/anime_cover_image.dart';
-import '../../components/status_badge.dart';
 import '../../design_tokens.dart';
 import '../home_layout.dart';
 import 'rating_icon.dart';
 
-/// 海报式卡片（顶部封面 + 角标信息）
+/// 统一的海报卡片。
 ///
-/// 共享给 Bento 首页（Grid 区段）和 PosterWall（主视图）。
-/// 通过 [titlePos] 控制标题位置：
-/// - `'on_cover'`：渐变遮罩 + 标题压在封面底部
-/// - `'below_cover'`：标题在封面外侧下方
-///
-/// PosterWall 用 [onLongPressOverride] 接管长按为"BlurSheet 浮层"，
-/// 此时不再触发多选模式入口。
-///
-/// 关注：series 类型的 item 在角落显示"系列"标签 + 集数。
+/// 旧实现把六套角标皮肤、标题条和评分条分别拼在卡片内部，导致每种布局
+/// 都有一套不同的遮挡规则。现在卡片只负责封面和交互，信息层统一由
+/// [_CoverMetaLayer] 渲染；样式与信息显隐彻底解耦。
 class AnimePosterCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final HomeViewProps props;
   final String titlePos;
-  final double borderRadius;
+  final double? borderRadius;
 
-  /// 是否抠图填满父容器（无 padding，用于 PosterWall）
+  /// 是否抠图填满父容器（海报墙可以关闭阴影）。
   final bool flush;
 
-  /// 长按覆盖回调（PosterWall 注入"BlurSheet 浮层"），
-  /// 不传则走 [props.onItemLongPress]（默认进多选模式）。
+  /// 长按覆盖回调（海报墙用于 Peek Sheet）。
   final VoidCallback? onLongPressOverride;
 
-  /// 是否启用 Hero 共享元素动画（与详情页封面联动）
-  ///
-  /// 默认 false 因为 Bento 首页可能在多个 section 同时出现同一番剧，
-  /// 重复 Hero tag 会让 Flutter 报错。PosterWall 单次只渲染一次，
-  /// 可以设为 true 获得 Hero 缩放过渡。
+  /// 是否启用 Hero 共享元素动画。
   final bool enableHero;
 
   const AnimePosterCard({
@@ -42,7 +31,7 @@ class AnimePosterCard extends StatelessWidget {
     required this.item,
     required this.props,
     this.titlePos = 'on_cover',
-    this.borderRadius = AppRadius.sm,
+    this.borderRadius,
     this.flush = false,
     this.onLongPressOverride,
     this.enableHero = false,
@@ -61,24 +50,54 @@ class AnimePosterCard extends StatelessWidget {
 
   bool get _isSelected => props.selectedIds.contains(_id);
 
+  String _progressLine() {
+    if (_isSeries) {
+      final count = _intValue('anime_count');
+      return count > 0 ? '$count 部作品' : '';
+    }
+    return props.progressTextOf(item);
+  }
+
+  int _intValue(String key) {
+    final value = item[key];
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final showOverlayText = titlePos == 'on_cover';
+    final coverRadius = borderRadius ?? props.coverBorderRadius;
+    final status = (item['status'] ?? '').toString().trim();
+    final statusColor = props.statusColors[status] ?? colorScheme.primary;
+    final rating = animeRatingOf(item);
+    final progress = _progressLine();
+    final titleOnCover = titlePos != 'below_cover';
 
-    final statusText = (item['status'] ?? '').toString();
-    final statusColor = props.statusColors[item['status']] ?? Colors.grey;
-    final hasRating =
-        !_isSeries && (item['rating'] is num) && (item['rating'] as num) > 0;
-    final ratingValue = hasRating ? (item['rating'] as num).toDouble() : 0.0;
+    // 封面信息使用独立开关，并再次尊重全局数据项开关。这样用户既可以
+    // 保持列表信息完整，也可以把封面调整成极简模式。
+    final showStatus =
+        !_isSeries &&
+        props.showCoverStatus &&
+        props.showStatus &&
+        status.isNotEmpty;
+    final showRating =
+        !_isSeries &&
+        props.showCoverRating &&
+        props.showRating &&
+        !props.isSelectionMode &&
+        rating.hasValue;
+    final showProgress =
+        !_isSeries &&
+        props.showCoverProgress &&
+        props.showProgress &&
+        progress.isNotEmpty;
+    final showType = !_isSeries && props.showCoverType && props.showSubjectType;
+    final showSeriesCount =
+        _isSeries && props.showCoverSeriesCount && _intValue('anime_count') > 0;
 
-    final showStatusBadge = props.showStatus;
-    final showRatingBadge =
-        !_isSeries && props.showRating && !props.isSelectionMode && hasRating;
-    final isBottomBar = props.badgeStyle == BadgeStyle.bottomBar;
-    final useBottomBar = isBottomBar && (showStatusBadge || showRatingBadge);
-    // 底部信息条高度（用于上推标题，避免重叠）
-    const double bottomBarHeight = 22;
+    final posterRadius = BorderRadius.circular(coverRadius);
 
     return GestureDetector(
       onTap: () => props.onItemTap(item),
@@ -89,177 +108,232 @@ class AnimePosterCard extends StatelessWidget {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(borderRadius),
+                borderRadius: posterRadius,
                 boxShadow: flush ? null : AppElevation.card(context),
                 border: props.isSelectionMode && _isSelected
                     ? Border.all(color: colorScheme.primary, width: 3)
                     : null,
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(borderRadius),
+                borderRadius: posterRadius,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    enableHero
-                        ? Hero(
-                            tag: _isSeries
-                                ? 'series_cover_$_id'
-                                : 'cover_$_id',
-                            child: AnimeCoverImage(
-                              url: item['cover_url'],
-                              appDocDir: props.appDocDir,
-                            ),
-                          )
-                        : AnimeCoverImage(
-                            url: item['cover_url'],
-                            appDocDir: props.appDocDir,
-                          ),
-                    if (showOverlayText)
-                      Positioned.fill(
-                        child: DecoratedBox(
-                          decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Colors.transparent,
-                                Colors.black87,
-                              ],
-                              stops: [0.0, 0.55, 1.0],
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (showStatusBadge && !isBottomBar)
-                      _buildStatusCorner(statusText, statusColor),
-                    if (!_isSeries && props.showSubjectType)
-                      Positioned(
-                        bottom: useBottomBar
-                            ? bottomBarHeight + AppSpacing.xs
-                            : AppSpacing.sm,
-                        right: AppSpacing.sm,
-                        child: _TypeBadge(
-                          icon: (item['subject_type'] ?? 'anime') == 'anime'
-                              ? Icons.movie_filter_outlined
-                              : Icons.menu_book_outlined,
-                        ),
-                      ),
-                    if (showRatingBadge && !isBottomBar)
-                      _buildRatingCorner(ratingValue),
-                    if (useBottomBar)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: _BottomInfoBar(
-                          statusText: showStatusBadge ? statusText : '',
-                          statusColor: statusColor,
-                          rating: showRatingBadge ? ratingValue : null,
-                          isSeries: _isSeries,
-                          seriesCount: _isSeries
-                              ? (item['anime_count'] ?? 0) as int
-                              : 0,
-                          height: bottomBarHeight,
-                        ),
-                      ),
-                    if (showOverlayText)
-                      Positioned(
-                        left: AppSpacing.sm,
-                        right: AppSpacing.sm,
-                        bottom: useBottomBar
-                            ? bottomBarHeight + AppSpacing.xs
-                            : AppSpacing.sm,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (props.showTitle)
-                              Text(
-                                _title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.2,
-                                  shadows: [
-                                    Shadow(
-                                      blurRadius: 4,
-                                      color: Colors.black87,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            if (props.showProgress && _progressLine().isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Text(
-                                  _progressLine(),
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.85),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                    _buildCoverImage(),
+                    _CoverMetaLayer(
+                      style: props.badgeStyle,
+                      title: _title,
+                      titleOnCover: titleOnCover,
+                      showTitle: props.showTitle,
+                      showStatus: showStatus,
+                      showRating: showRating,
+                      showProgress: showProgress,
+                      showType: showType,
+                      showSeriesCount: showSeriesCount,
+                      isAnime: (item['subject_type'] ?? 'anime') == 'anime',
+                      status: status,
+                      statusColor: statusColor,
+                      rating: rating.hasValue ? rating.label : '',
+                      progress: progress,
+                      isSeries: _isSeries,
+                      seriesCount: _intValue('anime_count'),
+                      scale: props.badgeScale,
+                      opacity: props.badgeOpacity,
+                      radius: props.badgeRadius,
+                    ),
                     if (props.isSelectionMode)
                       Positioned(
                         top: AppSpacing.sm,
                         right: AppSpacing.sm,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: _isSelected
-                                ? colorScheme.primary
-                                : Colors.black.withValues(alpha: 0.4),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.4),
-                              width: 1.5,
-                            ),
-                          ),
-                          padding: const EdgeInsets.all(2),
-                          child: Icon(
-                            _isSelected
-                                ? Icons.check_rounded
-                                : Icons.circle_outlined,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
+                        child: _SelectionMarker(isSelected: _isSelected),
                       ),
                   ],
                 ),
               ),
             ),
           ),
-          if (titlePos == 'below_cover')
-            Padding(
-              padding: const EdgeInsets.fromLTRB(2, 8, 2, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (props.showTitle)
-                    Text(
-                      _title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  if (props.showProgress && _progressLine().isNotEmpty)
-                    Text(
-                      _progressLine(),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                    ),
-                ],
+          if (!titleOnCover && (props.showTitle || showProgress))
+            _ExternalTitle(
+              title: _title,
+              progress: progress,
+              showTitle: props.showTitle,
+              showProgress: showProgress,
+              showType: showType,
+              isAnime: (item['subject_type'] ?? 'anime') == 'anime',
+              scale: props.badgeScale,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCoverImage() {
+    final image = AnimeCoverImage(
+      url: item['cover_url'],
+      appDocDir: props.appDocDir,
+    );
+    if (!enableHero) return image;
+    return Hero(
+      tag: _isSeries ? 'series_cover_$_id' : 'cover_$_id',
+      child: image,
+    );
+  }
+}
+
+/// 封面信息层。它只接受已经计算好的显示项，避免在不同布局里重复判断。
+class _CoverMetaLayer extends StatelessWidget {
+  final BadgeStyle style;
+  final String title;
+  final bool titleOnCover;
+  final bool showTitle;
+  final bool showStatus;
+  final bool showRating;
+  final bool showProgress;
+  final bool showType;
+  final bool showSeriesCount;
+  final bool isAnime;
+  final String status;
+  final Color statusColor;
+  final String rating;
+  final String progress;
+  final bool isSeries;
+  final int seriesCount;
+  final double scale;
+  final double opacity;
+  final double radius;
+
+  const _CoverMetaLayer({
+    required this.style,
+    required this.title,
+    required this.titleOnCover,
+    required this.showTitle,
+    required this.showStatus,
+    required this.showRating,
+    required this.showProgress,
+    required this.showType,
+    required this.showSeriesCount,
+    required this.isAnime,
+    required this.status,
+    required this.statusColor,
+    required this.rating,
+    required this.progress,
+    required this.isSeries,
+    required this.seriesCount,
+    required this.scale,
+    required this.opacity,
+    required this.radius,
+  });
+
+  bool get _hasInfo =>
+      showStatus || showRating || showProgress || showType || showSeriesCount;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (style) {
+      case BadgeStyle.overlay:
+        return _buildOverlay();
+      case BadgeStyle.corners:
+        return _buildCorners();
+      case BadgeStyle.bottomBar:
+        return _buildBottomBar();
+      case BadgeStyle.minimal:
+        return _buildMinimal();
+    }
+  }
+
+  Widget _buildOverlay() {
+    if (!_hasInfo && !(titleOnCover && showTitle)) {
+      return const SizedBox.shrink();
+    }
+    return Positioned(
+      left: AppSpacing.sm,
+      right: AppSpacing.sm,
+      bottom: AppSpacing.sm,
+      child: _InfoSurface(
+        radius: radius,
+        color: Colors.black.withValues(alpha: opacity),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            9 * scale,
+            8 * scale,
+            9 * scale,
+            7 * scale,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (titleOnCover && showTitle)
+                _TitleText(title: title, scale: scale),
+              if (titleOnCover && showTitle && _hasInfo)
+                SizedBox(height: 5 * scale),
+              if (_hasInfo)
+                _InfoRow(
+                  showStatus: showStatus,
+                  showRating: showRating,
+                  showProgress: showProgress,
+                  showType: showType,
+                  showSeriesCount: showSeriesCount,
+                  isAnime: isAnime,
+                  status: status,
+                  statusColor: statusColor,
+                  rating: rating,
+                  progress: progress,
+                  isSeries: isSeries,
+                  seriesCount: seriesCount,
+                  scale: scale,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCorners() {
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          if (showStatus || showSeriesCount)
+            Positioned(
+              top: AppSpacing.sm,
+              left: AppSpacing.sm,
+              child: _CornerBadge(
+                text: isSeries ? '$seriesCount 部' : status,
+                color: isSeries ? Colors.black : statusColor,
+                icon: isSeries ? Icons.layers_outlined : null,
+                scale: scale,
+                opacity: opacity,
+                radius: radius,
+              ),
+            ),
+          if (showRating)
+            Positioned(
+              top: AppSpacing.sm,
+              right: AppSpacing.sm,
+              child: _CornerBadge(
+                text: rating,
+                color: Colors.black,
+                icon: Icons.star_rounded,
+                scale: scale,
+                opacity: opacity,
+                radius: radius,
+                isRating: true,
+              ),
+            ),
+          if (titleOnCover && (showTitle || showProgress))
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _GradientTitleBlock(
+                title: title,
+                progress: progress,
+                showTitle: showTitle,
+                showProgress: showProgress,
+                scale: scale,
+                showType: showType,
+                isAnime: isAnime,
               ),
             ),
         ],
@@ -267,366 +341,602 @@ class AnimePosterCard extends StatelessWidget {
     );
   }
 
-  String _progressLine() {
-    if (_isSeries) {
-      final count = item['anime_count'] ?? 0;
-      return count > 0 ? '$count 部作品' : '';
+  Widget _buildBottomBar() {
+    if (!_hasInfo && !(titleOnCover && showTitle)) {
+      return const SizedBox.shrink();
     }
-    return props.progressTextOf(item);
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (titleOnCover && (showTitle || showProgress))
+            _GradientTitleBlock(
+              title: title,
+              progress: progress,
+              showTitle: showTitle,
+              showProgress: showProgress,
+              scale: scale,
+              compact: true,
+              showType: showType,
+              isAnime: isAnime,
+            ),
+          if (_hasInfo)
+            _InfoSurface(
+              radius: 0,
+              color: Colors.black.withValues(
+                alpha: (opacity + 0.08).clamp(0.0, 1.0),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: 9 * scale,
+                  vertical: 7 * scale,
+                ),
+                child: _InfoRow(
+                  showStatus: showStatus,
+                  showRating: showRating,
+                  showProgress: !titleOnCover && showProgress,
+                  showType: showType,
+                  showSeriesCount: showSeriesCount,
+                  isAnime: isAnime,
+                  status: status,
+                  statusColor: statusColor,
+                  rating: rating,
+                  progress: progress,
+                  isSeries: isSeries,
+                  seriesCount: seriesCount,
+                  scale: scale,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
-  /// 左上角的状态/系列标记，位置和外观随 [BadgeStyle] 变化
-  Widget _buildStatusCorner(String statusText, Color statusColor) {
-    if (_isSeries) {
-      // 系列卡片：四种样式下沿用胶囊，但位置随 flush 调整
-      final isFlush = props.badgeStyle == BadgeStyle.flush;
-      return Positioned(
-        top: isFlush ? 0 : AppSpacing.sm,
-        left: isFlush ? 0 : AppSpacing.sm,
-        child: _SeriesPill(
-          count: item['anime_count'] ?? 0,
-          flushCorner: isFlush,
+  Widget _buildMinimal() {
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          if (showStatus || showSeriesCount)
+            Positioned(
+              top: AppSpacing.sm,
+              left: AppSpacing.sm,
+              child: _MinimalStatus(
+                color: isSeries ? Colors.white : statusColor,
+                text: isSeries && showSeriesCount ? '$seriesCount 部' : null,
+                scale: scale,
+                opacity: opacity,
+              ),
+            ),
+          if (showRating)
+            Positioned(
+              top: AppSpacing.sm,
+              right: AppSpacing.sm,
+              child: _MinimalRating(rating: rating, scale: scale),
+            ),
+          if (titleOnCover && (showTitle || showProgress))
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _GradientTitleBlock(
+                title: title,
+                progress: progress,
+                showTitle: showTitle,
+                showProgress: showProgress,
+                scale: scale,
+                compact: true,
+                showType: showType,
+                isAnime: isAnime,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoSurface extends StatelessWidget {
+  final double radius;
+  final Color color;
+  final Widget child;
+
+  const _InfoSurface({
+    required this.radius,
+    required this.color,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+      ),
+      child: child,
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final bool showStatus;
+  final bool showRating;
+  final bool showProgress;
+  final bool showType;
+  final bool showSeriesCount;
+  final bool isAnime;
+  final String status;
+  final Color statusColor;
+  final String rating;
+  final String progress;
+  final bool isSeries;
+  final int seriesCount;
+  final double scale;
+
+  const _InfoRow({
+    required this.showStatus,
+    required this.showRating,
+    required this.showProgress,
+    required this.showType,
+    required this.showSeriesCount,
+    required this.isAnime,
+    required this.status,
+    required this.statusColor,
+    required this.rating,
+    required this.progress,
+    required this.isSeries,
+    required this.seriesCount,
+    required this.scale,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final metadata = <Widget>[];
+    if (isSeries && showSeriesCount) {
+      metadata.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.layers_outlined, size: 12 * scale, color: Colors.white),
+            SizedBox(width: 4 * scale),
+            Text('$seriesCount 部'),
+          ],
+        ),
+      );
+    } else if (showStatus) {
+      metadata.add(
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6 * scale,
+              height: 6 * scale,
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            SizedBox(width: 5 * scale),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 72 * scale),
+              child: Text(status, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          ],
         ),
       );
     }
-    switch (props.badgeStyle) {
-      case BadgeStyle.floating:
-        return Positioned(
-          top: AppSpacing.sm,
-          left: AppSpacing.sm,
-          child: StatusBadge(
-            status: statusText,
-            color: statusColor,
-            isCompact: true,
-          ),
-        );
-      case BadgeStyle.flush:
-        return Positioned(
-          top: 0,
-          left: 0,
-          child: _FlushStatusBadge(
-            status: statusText,
-            color: statusColor,
-          ),
-        );
-      case BadgeStyle.minimal:
-        return Positioned(
-          top: AppSpacing.xs,
-          left: AppSpacing.xs,
-          child: _MinimalStatusDot(color: statusColor),
-        );
-      case BadgeStyle.bottomBar:
-        return const SizedBox.shrink();
+
+    if (showType && !isSeries) {
+      metadata.add(
+        Icon(
+          isAnime ? Icons.movie_outlined : Icons.menu_book_outlined,
+          size: 12 * scale,
+          color: Colors.white.withValues(alpha: 0.78),
+        ),
+      );
     }
-  }
 
-  /// 右上角的评分标记
-  Widget _buildRatingCorner(double rating) {
-    switch (props.badgeStyle) {
-      case BadgeStyle.floating:
-        return Positioned(
-          top: AppSpacing.sm,
-          right: AppSpacing.sm,
-          child: _RatingPill(rating: rating),
-        );
-      case BadgeStyle.flush:
-        return Positioned(
-          top: 0,
-          right: 0,
-          child: _FlushRatingPill(rating: rating),
-        );
-      case BadgeStyle.minimal:
-        return Positioned(
-          top: AppSpacing.xs,
-          right: AppSpacing.sm,
-          child: _MinimalRatingText(rating: rating),
-        );
-      case BadgeStyle.bottomBar:
-        return const SizedBox.shrink();
+    if (showProgress && !isSeries && progress.isNotEmpty) {
+      metadata.add(
+        Text(
+          progress,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.78)),
+        ),
+      );
     }
-  }
-}
 
-class _SeriesPill extends StatelessWidget {
-  final int count;
-  final bool flushCorner;
-  const _SeriesPill({required this.count, this.flushCorner = false});
+    if (showRating) {
+      metadata.add(_RatingMark(rating: rating, scale: scale));
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: flushCorner
-            ? const BorderRadius.only(bottomRight: Radius.circular(AppRadius.xs))
-            : BorderRadius.circular(AppRadius.xs),
-        border: Border.all(color: Colors.white24, width: 0.5),
+    return DefaultTextStyle(
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 10 * scale,
+        fontWeight: FontWeight.w700,
+        height: 1.1,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.layers, color: Colors.white, size: 12),
-          const SizedBox(width: 4),
-          Text(
-            '$count 部',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+      child: Wrap(
+        spacing: 7 * scale,
+        runSpacing: 3 * scale,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: metadata,
       ),
     );
   }
 }
 
-class _TypeBadge extends StatelessWidget {
-  final IconData icon;
-  const _TypeBadge({required this.icon});
+class _TitleText extends StatelessWidget {
+  final String title;
+  final double scale;
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(AppRadius.xs),
-      ),
-      child: Icon(icon, size: 14, color: Colors.white),
-    );
-  }
-}
-
-class _RatingPill extends StatelessWidget {
-  final double rating;
-  const _RatingPill({required this.rating});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(AppRadius.xs),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const RatingIconWidget(size: 11),
-          const SizedBox(width: 2),
-          Text(
-            rating.toStringAsFixed(1),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 贴边样式的状态徽章：外侧切平，内侧 8px 圆角
-class _FlushStatusBadge extends StatelessWidget {
-  final String status;
-  final Color color;
-  const _FlushStatusBadge({required this.status, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.92),
-        borderRadius: const BorderRadius.only(
-          bottomRight: Radius.circular(AppRadius.xs),
-        ),
-      ),
-      child: Text(
-        status,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
-/// 贴边样式的评分徽章：外侧切平，内侧 8px 圆角
-class _FlushRatingPill extends StatelessWidget {
-  final double rating;
-  const _FlushRatingPill({required this.rating});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.7),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(AppRadius.xs),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const RatingIconWidget(size: 11),
-          const SizedBox(width: 2),
-          Text(
-            rating.toStringAsFixed(1),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 极简样式的状态：8px 实心圆点 + 白色描边
-class _MinimalStatusDot extends StatelessWidget {
-  final Color color;
-  const _MinimalStatusDot({required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.45),
-            blurRadius: 2,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// 极简样式的评分：仅数字 + 阴影，无背景
-class _MinimalRatingText extends StatelessWidget {
-  final double rating;
-  const _MinimalRatingText({required this.rating});
+  const _TitleText({required this.title, required this.scale});
 
   @override
   Widget build(BuildContext context) {
     return Text(
-      rating.toStringAsFixed(1),
-      style: const TextStyle(
+      title,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
         color: Colors.white,
-        fontSize: 12,
+        fontSize: 12 * scale,
         fontWeight: FontWeight.w800,
-        shadows: [
-          Shadow(blurRadius: 3, color: Colors.black87),
-          Shadow(blurRadius: 6, color: Colors.black54),
-        ],
+        height: 1.18,
+        shadows: const [Shadow(blurRadius: 4, color: Colors.black87)],
       ),
     );
   }
 }
 
-/// 底部信息条：左侧状态色块 + 文字、右侧评分
-class _BottomInfoBar extends StatelessWidget {
-  final String statusText;
-  final Color statusColor;
-  final double? rating;
-  final bool isSeries;
-  final int seriesCount;
-  final double height;
+class _GradientTitleBlock extends StatelessWidget {
+  final String title;
+  final String progress;
+  final bool showTitle;
+  final bool showProgress;
+  final double scale;
+  final bool compact;
+  final bool showType;
+  final bool isAnime;
 
-  const _BottomInfoBar({
-    required this.statusText,
-    required this.statusColor,
-    required this.rating,
-    required this.isSeries,
-    required this.seriesCount,
-    required this.height,
+  const _GradientTitleBlock({
+    required this.title,
+    required this.progress,
+    required this.showTitle,
+    required this.showProgress,
+    required this.scale,
+    this.compact = false,
+    this.showType = false,
+    this.isAnime = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: height,
-      padding: const EdgeInsets.symmetric(horizontal: 6),
-      decoration: BoxDecoration(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        9 * scale,
+        compact ? 22 * scale : 30 * scale,
+        9 * scale,
+        8 * scale,
+      ),
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Colors.black.withValues(alpha: 0.0),
-            Colors.black.withValues(alpha: 0.65),
-          ],
+          colors: [Colors.transparent, Colors.black87],
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (isSeries) ...[
-            const Icon(Icons.layers, color: Colors.white, size: 11),
-            const SizedBox(width: 4),
-            Text(
-              '$seriesCount 部',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ] else if (statusText.isNotEmpty) ...[
-            Container(
-              width: 4,
-              height: 12,
-              decoration: BoxDecoration(
-                color: statusColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(
-                statusText,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
+          if (showTitle) _TitleText(title: title, scale: scale),
+          if (showProgress && progress.isNotEmpty) ...[
+            SizedBox(height: 3 * scale),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showType) ...[
+                  Icon(
+                    isAnime ? Icons.movie_outlined : Icons.menu_book_outlined,
+                    size: 11 * scale,
+                    color: Colors.white.withValues(alpha: 0.78),
+                  ),
+                  SizedBox(width: 4 * scale),
+                ],
+                Flexible(
+                  child: Text(
+                    progress,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.78),
+                      fontSize: 10 * scale,
+                      fontWeight: FontWeight.w600,
+                      shadows: const [
+                        Shadow(blurRadius: 3, color: Colors.black87),
+                      ],
+                    ),
+                  ),
                 ),
+              ],
+            ),
+          ] else if (showType)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Icon(
+                isAnime ? Icons.movie_outlined : Icons.menu_book_outlined,
+                size: 11 * scale,
+                color: Colors.white.withValues(alpha: 0.78),
               ),
             ),
-          ],
-          const Spacer(),
-          if (rating != null) ...[
-            const RatingIconWidget(size: 11),
-            const SizedBox(width: 2),
-            Text(
-              rating!.toStringAsFixed(1),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
 }
 
-// 防止未使用的 import 警告（SettingsManager 在 future 扩展时会用到）
-// ignore: unused_element
-void _useSettings() => SettingsManager();
+class _CornerBadge extends StatelessWidget {
+  final String text;
+  final Color color;
+  final IconData? icon;
+  final double scale;
+  final double opacity;
+  final double radius;
+  final bool isRating;
+
+  const _CornerBadge({
+    required this.text,
+    required this.color,
+    required this.icon,
+    required this.scale,
+    required this.opacity,
+    required this.radius,
+    this.isRating = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: BoxConstraints(maxWidth: 110 * scale),
+      padding: EdgeInsets.symmetric(horizontal: 7 * scale, vertical: 4 * scale),
+      decoration: BoxDecoration(
+        color: color.withValues(
+          alpha: (isRating ? opacity * 0.88 : opacity).clamp(0.0, 1.0),
+        ),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 11 * scale, color: Colors.white),
+            SizedBox(width: 3 * scale),
+          ],
+          Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 10 * scale,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RatingMark extends StatelessWidget {
+  final String rating;
+  final double scale;
+
+  const _RatingMark({required this.rating, required this.scale});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        RatingIconWidget(size: 11 * scale),
+        SizedBox(width: 2 * scale),
+        Text(
+          rating,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 10 * scale,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MinimalStatus extends StatelessWidget {
+  final Color color;
+  final String? text;
+  final double scale;
+  final double opacity;
+
+  const _MinimalStatus({
+    required this.color,
+    required this.text,
+    required this.scale,
+    required this.opacity,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: opacity * 0.65),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(4 * scale),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8 * scale,
+              height: 8 * scale,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+              ),
+            ),
+            if (text != null) ...[
+              SizedBox(width: 4 * scale),
+              Text(
+                text!,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 9 * scale,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MinimalRating extends StatelessWidget {
+  final String rating;
+  final double scale;
+
+  const _MinimalRating({required this.rating, required this.scale});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.52),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: 6 * scale,
+          vertical: 4 * scale,
+        ),
+        child: _RatingMark(rating: rating, scale: scale),
+      ),
+    );
+  }
+}
+
+class _SelectionMarker extends StatelessWidget {
+  final bool isSelected;
+
+  const _SelectionMarker({required this.isSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected
+            ? colorScheme.primary
+            : Colors.black.withValues(alpha: 0.45),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Icon(
+        isSelected ? Icons.check_rounded : Icons.circle_outlined,
+        color: Colors.white,
+        size: 18,
+      ),
+    );
+  }
+}
+
+class _ExternalTitle extends StatelessWidget {
+  final String title;
+  final String progress;
+  final bool showTitle;
+  final bool showProgress;
+  final bool showType;
+  final bool isAnime;
+  final double scale;
+
+  const _ExternalTitle({
+    required this.title,
+    required this.progress,
+    required this.showTitle,
+    required this.showProgress,
+    required this.showType,
+    required this.isAnime,
+    required this.scale,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 8, 2, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showTitle)
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                height: 1.15,
+                fontSize: (textTheme.labelMedium?.fontSize ?? 12) * scale,
+              ),
+            ),
+          if (showProgress && progress.isNotEmpty)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showType) ...[
+                  Icon(
+                    isAnime ? Icons.movie_outlined : Icons.menu_book_outlined,
+                    size: 11 * scale,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                Flexible(
+                  child: Text(
+                    progress,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: (textTheme.bodySmall?.fontSize ?? 12) * scale,
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else if (showType)
+            Icon(
+              isAnime ? Icons.movie_outlined : Icons.menu_book_outlined,
+              size: 11 * scale,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+        ],
+      ),
+    );
+  }
+}

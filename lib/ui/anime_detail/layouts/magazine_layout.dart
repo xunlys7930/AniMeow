@@ -76,17 +76,14 @@ class MagazineLayout extends StatelessWidget {
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 48),
           sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                if (index >= props.orderedVisibleModules.length) return null;
-                final module = props.orderedVisibleModules[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 28),
-                  child: buildDetailModule(module, props),
-                );
-              },
-              childCount: props.orderedVisibleModules.length,
-            ),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              if (index >= props.orderedVisibleModules.length) return null;
+              final module = props.orderedVisibleModules[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 28),
+                child: buildDetailModule(module, props),
+              );
+            }, childCount: props.orderedVisibleModules.length),
           ),
         ),
       ],
@@ -103,7 +100,7 @@ class _HeroOverlay extends StatelessWidget {
     final typeIcon = props.isAnime
         ? Icons.movie_filter_outlined
         : Icons.menu_book_rounded;
-    final typeLabel = props.isAnime ? '番剧' : '漫画 / 小说';
+    final typeLabel = props.subjectProfile.typeLabel;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,8 +138,10 @@ class _HeroOverlay extends StatelessWidget {
                   onTap: props.onSeriesTap,
                   borderRadius: BorderRadius.circular(6),
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(6),
@@ -170,9 +169,7 @@ class _HeroOverlay extends StatelessWidget {
             fontSize: 26,
             fontWeight: FontWeight.w900,
             height: 1.2,
-            shadows: [
-              Shadow(blurRadius: 8, color: Colors.black87),
-            ],
+            shadows: [Shadow(blurRadius: 8, color: Colors.black87)],
           ),
         ),
         const SizedBox(height: 10),
@@ -180,8 +177,10 @@ class _HeroOverlay extends StatelessWidget {
           children: [
             if (props.status.isNotEmpty)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: props.statusColor.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(12),
@@ -210,9 +209,10 @@ class _HeroOverlay extends StatelessWidget {
               ),
             ],
             const Spacer(),
-            if (props.rating > 0)
+            if (props.hasRating)
               RatingDisplay(
                 rating: props.rating,
+                grade: props.ratingGrade,
                 color: Colors.amber,
                 iconSize: 18,
                 textSize: 16,

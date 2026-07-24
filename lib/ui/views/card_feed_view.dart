@@ -8,6 +8,7 @@ import 'home_layout.dart';
 import '_shared/anime_list_card.dart';
 import '_shared/anime_swipe_actions.dart';
 import '_shared/rating_icon.dart';
+import '../../utils/anime_rating.dart';
 
 /// 精致卡片流（Letterboxd 风格单列大卡片）
 ///
@@ -32,10 +33,7 @@ class CardFeedView extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
             SizedBox(height: 200),
-            EmptyStateWidget(
-              message: '还没添加番剧',
-              buttonText: '去添加一部吧',
-            ),
+            EmptyStateWidget(message: '还没添加番剧', buttonText: '去添加一部吧'),
           ],
         ),
       );
@@ -55,57 +53,66 @@ class CardFeedView extends StatelessWidget {
           }
           return false;
         },
-        child: ListView.separated(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.md,
-            AppSpacing.lg,
-            AppSpacing.xxl * 2,
-          ),
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          itemCount: props.items.length + (props.hasMore ? 1 : 0),
-          separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-          itemBuilder: (context, i) {
-            if (i >= props.items.length) {
-              return const Padding(
-                padding: EdgeInsets.all(AppSpacing.lg),
-                child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final horizontalPadding = AppBreakpoints.centeredPadding(
+              constraints.maxWidth,
+              maxContentWidth: 920,
+            );
+            return ListView.separated(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                AppSpacing.md,
+                horizontalPadding,
+                AppSpacing.xxl * 2,
+              ),
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              itemCount: props.items.length + (props.hasMore ? 1 : 0),
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
+              itemBuilder: (context, i) {
+                if (i >= props.items.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(AppSpacing.lg),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  );
+                }
+                final item = props.items[i];
+                // 系列保留共享卡片样式（横向 row），与 anime 区分
+                if (item['type'] == 'series') {
+                  return AnimeListCard(
+                    item: item,
+                    props: props,
+                    size: AnimeListCardSize.regular,
+                  );
+                }
+                // 多选模式下不允许滑动，避免误触
+                if (props.isSelectionMode) {
+                  return _CardFeedItem(item: item, props: props);
+                }
+                return SwipeActionTile(
+                  dismissKey: ValueKey('cf_${item['id']}'),
+                  onSwipeRight: () => incrementEpisode(
+                    item,
+                    context: context,
+                    onRefresh: props.onRefresh,
                   ),
-                ),
-              );
-            }
-            final item = props.items[i];
-            // 系列保留共享卡片样式（横向 row），与 anime 区分
-            if (item['type'] == 'series') {
-              return AnimeListCard(
-                item: item,
-                props: props,
-                size: AnimeListCardSize.regular,
-              );
-            }
-            // 多选模式下不允许滑动，避免误触
-            if (props.isSelectionMode) {
-              return _CardFeedItem(item: item, props: props);
-            }
-            return SwipeActionTile(
-              dismissKey: ValueKey('cf_${item['id']}'),
-              onSwipeRight: () => incrementEpisode(
-                item,
-                context: context,
-                onRefresh: props.onRefresh,
-              ),
-              onSwipeLeft: () => cycleStatus(
-                item,
-                context: context,
-                onRefresh: props.onRefresh,
-              ),
-              child: _CardFeedItem(item: item, props: props),
+                  onSwipeLeft: () => cycleStatus(
+                    item,
+                    context: context,
+                    onRefresh: props.onRefresh,
+                  ),
+                  child: _CardFeedItem(item: item, props: props),
+                );
+              },
             );
           },
         ),
@@ -135,9 +142,11 @@ class _CardFeedItem extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final status = (item['status'] ?? '').toString();
     final statusColor = props.statusColors[status] ?? colorScheme.outline;
+    final coverRadius = props.coverBorderRadius;
     final studio = (item['studio'] ?? '').toString().trim();
     final seriesName = (item['series_name'] ?? '').toString().trim();
     final subjectType = (item['subject_type'] ?? 'anime').toString();
+    final rating = animeRatingOf(item);
 
     final total = (item['total_episodes'] as int?) ?? 0;
     final watched = (item['watched_episodes'] as int?) ?? 0;
@@ -149,7 +158,7 @@ class _CardFeedItem extends StatelessWidget {
       child: Container(
         height: 184,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(coverRadius),
           gradient: LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
@@ -198,13 +207,14 @@ class _CardFeedItem extends StatelessWidget {
                   ),
                   if (props.showRating &&
                       !props.isSelectionMode &&
-                      (item['rating'] is num) &&
-                      (item['rating'] as num) > 0)
+                      rating.hasValue)
                     Positioned(
                       top: AppSpacing.sm,
                       right: AppSpacing.sm,
                       child: _RatingPill(
-                          rating: (item['rating'] as num).toDouble()),
+                        label: rating.label,
+                        scale: props.badgeScale,
+                      ),
                     ),
                 ],
               ),
@@ -228,7 +238,8 @@ class _CardFeedItem extends StatelessWidget {
                         (item['title'] ?? '').toString(),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
                               fontWeight: FontWeight.w900,
                               letterSpacing: -0.2,
                               height: 1.2,
@@ -243,9 +254,9 @@ class _CardFeedItem extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          color: colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
 
@@ -356,13 +367,14 @@ class _MetaChip extends StatelessWidget {
 }
 
 class _RatingPill extends StatelessWidget {
-  final double rating;
-  const _RatingPill({required this.rating});
+  final String label;
+  final double scale;
+  const _RatingPill({required this.label, required this.scale});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      padding: EdgeInsets.symmetric(horizontal: 6 * scale, vertical: 3 * scale),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(AppRadius.xs),
@@ -370,13 +382,13 @@ class _RatingPill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const RatingIconWidget(size: 12),
-          const SizedBox(width: 2),
+          RatingIconWidget(size: 12 * scale),
+          SizedBox(width: 2 * scale),
           Text(
-            rating.toStringAsFixed(1),
-            style: const TextStyle(
+            label,
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 11,
+              fontSize: 11 * scale,
               fontWeight: FontWeight.w900,
             ),
           ),

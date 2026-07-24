@@ -40,7 +40,6 @@ class _DetailModuleManagementPageState
 
   Future<void> _onReorder(int oldIndex, int newIndex) async {
     setState(() {
-      if (oldIndex < newIndex) newIndex -= 1;
       final m = _order.removeAt(oldIndex);
       _order.insert(newIndex, m);
     });
@@ -97,10 +96,7 @@ class _DetailModuleManagementPageState
                 Expanded(
                   child: Text(
                     '长按拖动重新排序，开关控制是否显示。封面 / 标题 / 评分 始终保留在顶部。',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
                 ),
               ],
@@ -115,9 +111,9 @@ class _DetailModuleManagementPageState
                 AppSpacing.xl,
               ),
               itemCount: _order.length,
-              onReorder: _onReorder,
+              onReorderItem: _onReorder,
               buildDefaultDragHandles: false,
-              proxyDecorator: (child, _, __) => Material(
+              proxyDecorator: (child, _, _) => Material(
                 color: Colors.transparent,
                 elevation: 6,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -187,11 +183,7 @@ class _ModuleRow extends StatelessWidget {
                 color: cs.primaryContainer,
                 borderRadius: BorderRadius.circular(AppRadius.xs),
               ),
-              child: Icon(
-                module.icon,
-                size: 20,
-                color: cs.onPrimaryContainer,
-              ),
+              child: Icon(module.icon, size: 20, color: cs.onPrimaryContainer),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -207,18 +199,12 @@ class _ModuleRow extends StatelessWidget {
                   ),
                   Text(
                     module.description,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
                 ],
               ),
             ),
-            Switch(
-              value: !hidden,
-              onChanged: onToggle,
-            ),
+            Switch(value: !hidden, onChanged: onToggle),
           ],
         ),
       ),
