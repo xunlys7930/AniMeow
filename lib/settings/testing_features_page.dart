@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'anime_style_analysis_page.dart';
 import 'error_log_page.dart';
 import 'server_discovery_page.dart';
 
@@ -40,6 +41,21 @@ class TestingFeaturesPage extends StatelessWidget {
               );
             },
           ),
+          _buildFeatureCard(
+            context: context,
+            icon: Icons.auto_awesome,
+            color: Colors.pinkAccent,
+            title: "AI 看番风格分析",
+            subtitle: "注册用户每天一次，让云端分析你的看番习惯",
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AnimeStyleAnalysisPage(),
+                ),
+              );
+            },
+          ),
           // 未来可以在这里添加更多测试功能
         ],
       ),
@@ -60,7 +76,9 @@ class TestingFeaturesPage extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       child: InkWell(

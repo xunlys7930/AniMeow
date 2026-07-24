@@ -60,7 +60,7 @@ class _CoverThumb extends StatelessWidget {
     return Hero(
       tag: 'cover_${props.anime['id'] ?? props.anime['api_id'] ?? props.title}',
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(props.coverBorderRadius),
         child: SizedBox(
           width: width,
           height: height,

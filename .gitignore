@@ -17,11 +17,16 @@ migrate_working_dir/
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.dart_appdata/
+.dart_localappdata/
+.dart_home/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+/android/build/
+/.gradle-codex/
 
 app.*.symbols
 app.*.map.json
@@ -56,6 +61,9 @@ windows/runner/out/
 .gemini/
 .cursor/
 .copilot/
+.agents/
+.uploads/
+**/BACKEND_CONTEXT.md
 
 # ───────────────────────────────────────────────
 # 临时 / 调试 / 备份文件
@@ -63,23 +71,46 @@ windows/runner/out/
 temp_response*.json
 project_code_backup.txt
 analyze_*.txt
-*.py
+debug.log
+check_bangumi_episodes.py
+debug_bangumi_api.py
 extract_log.dart
 recover.dart
 progress_card.dart
 progress_card_full.dart
+1.3.1)
+面试介绍与问题准备.md
+
+# 本地生成的宣传/富文档产物（源代码发布不需要）
+animeow-user-manual/
+promo_assets/
+promo_script.md
+promo_video.html
 
 # ───────────────────────────────────────────────
-# 后端 / 服务端脚本（仅 Flutter 客户端开源）
+# 后端本地数据与运行产物（后端源码本身允许开源）
 # ───────────────────────────────────────────────
-app.js
-server_sync_covers.js
+backend/invite_codes.txt
+backend/unused_invite_codes.txt
+backend/appjs.stdout.log
+backend/appjs.stderr.log
+backend/public/*.apk
+backend/public/*.aab
+backend/public/*.exe
+backend/public/*.zip
 
 # ───────────────────────────────────────────────
 # 密钥 / 环境变量
 # ───────────────────────────────────────────────
 .env
 .env.*
+!.env.example
+dart_defines.local.json
+android/key.properties
+*.jks
+*.keystore
+*.p12
+*.pfx
 
 # ───────────────────────────────────────────────
 # Node.js
@@ -93,9 +124,12 @@ yarn-error.log*
 # 本地数据库 dump / 备份
 # ───────────────────────────────────────────────
 *.sqlite
+*.sqlite3
+*.db
 *.db-journal
 *.bak
 backup/
+backend/dumps/
 
 # Sentry 本地缓存
 .sentry-native/

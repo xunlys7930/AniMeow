@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
-import '../db/database_helper.dart';
+import 'package:flutter/material.dart';
+import '../repositories/series_repository.dart';
+import '../services/service_locator.dart';
 import 'neumorphic_style.dart';
 
 /// 系列选择对话框
@@ -16,6 +17,7 @@ class _SeriesSelectionDialogState extends State<SeriesSelectionDialog> {
   List<Map<String, dynamic>> _allSeries = [];
   bool _isLoading = true;
   int? _selectedId;
+  final SeriesRepository _seriesRepo = getIt<SeriesRepository>();
 
   @override
   void initState() {
@@ -25,7 +27,7 @@ class _SeriesSelectionDialogState extends State<SeriesSelectionDialog> {
   }
 
   Future<void> _loadSeries() async {
-    final list = await DatabaseHelper().getAllSeries();
+    final list = await _seriesRepo.getAllSeriesMaps();
     if (mounted) {
       setState(() {
         _allSeries = list;
@@ -135,7 +137,7 @@ class _SeriesSelectionDialogState extends State<SeriesSelectionDialog> {
               final name = textController.text.trim();
               if (name.isEmpty) return;
 
-              int newId = await DatabaseHelper().createSeries(name);
+              int newId = await _seriesRepo.createSeries(name);
               if (newId != -1) {
                 await _loadSeries();
                 setState(() => _selectedId = newId);

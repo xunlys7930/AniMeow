@@ -1,22 +1,104 @@
-﻿import 'dart:io';
+import 'dart:async';
+import 'dart:io';
 import 'package:path/path.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../utils/logger.dart';
+import '../models/character_group_package.dart';
+
+import 'dao/anime_dao.dart';
+import 'dao/tag_dao.dart';
+import 'dao/series_dao.dart';
+import 'dao/watch_status_dao.dart';
+import 'dao/watch_record_dao.dart';
+import 'dao/log_dao.dart';
+import 'dao/character_dao.dart';
 
 /// 数据库帮助类，管理应用数据存储
 /// 使用 SQLite 数据库，支持跨平台（包括桌面端）
 class DatabaseHelper {
+  static const String animesTable = 'animes';
+  static const String tagsTable = 'tags';
+  static const String animeTagsTable = 'anime_tags';
+  static const String seriesTable = 'series';
+  static const String watchStatusesTable = 'watch_statuses';
+  static const String watchRecordsTable = 'watch_records';
+  static const String appLogsTable = 'app_logs';
+  static const String animeAnalysisRecordsTable = 'anime_analysis_records';
+  static const String charactersTable = 'characters';
+  static const String animeCharactersTable = 'anime_characters';
+  static const String characterRelationsTable = 'character_relations';
+  static const String characterTagsTable = 'character_tags';
+  static const String characterTagLinksTable = 'character_tag_links';
+  static const String characterGroupsTable = 'character_groups';
+  static const String characterGroupCharactersTable =
+      'character_group_characters';
+  static const String characterGroupWorksTable = 'character_group_works';
+  static const int _databaseVersion = 19;
+
   // 单例模式实例
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
+
+  // DAO 成员变量（向下兼容及外部访问）
+  late final AnimeDao animeDao = AnimeDao();
+  late final TagDao tagDao = TagDao();
+  late final SeriesDao seriesDao = SeriesDao();
+  late final WatchStatusDao watchStatusDao = WatchStatusDao();
+  late final WatchRecordDao watchRecordDao = WatchRecordDao();
+  late final LogDao logDao = LogDao();
+  late final CharacterDao characterDao = CharacterDao();
+
+  final Map<String, StreamController<void>> _tableControllers = {};
 
   /// 单例工厂构造函数
   factory DatabaseHelper() {
     return _instance;
   }
 
-  /// 私有构造函数
   DatabaseHelper._internal();
+
+  Stream<void> watchTable(String table) => _controllerFor(table).stream;
+
+  Stream<void> watchTables(Set<String> tables) async* {
+    final merged = StreamController<void>();
+    final subscriptions = <StreamSubscription<void>>[];
+
+    for (final table in tables) {
+      subscriptions.add(
+        _controllerFor(table).stream.listen((_) {
+          if (!merged.isClosed) merged.add(null);
+        }),
+      );
+    }
+
+    merged.onCancel = () async {
+      for (final subscription in subscriptions) {
+        await subscription.cancel();
+      }
+    };
+
+    yield* merged.stream;
+  }
+
+  StreamController<void> _controllerFor(String table) {
+    return _tableControllers.putIfAbsent(
+      table,
+      () => StreamController<void>.broadcast(),
+    );
+  }
+
+  void notifyTableChanged(String table) {
+    final controller = _tableControllers[table];
+    if (controller != null && !controller.isClosed) {
+      controller.add(null);
+    }
+  }
+
+  void notifyTablesChanged(Iterable<String> tables) {
+    for (final table in tables) {
+      notifyTableChanged(table);
+    }
+  }
 
   /// 获取数据库实例（懒加载）
   Future<Database> get database async {
@@ -39,7 +121,7 @@ class DatabaseHelper {
     // 打开数据库，如果不存在则创建
     final db = await openDatabase(
       path,
-      version: 9,
+      version: _databaseVersion,
       onConfigure: (db) async {
         // 开启外键支持，确保级联删除生效
         await db.execute('PRAGMA foreign_keys = ON');
@@ -47,6 +129,9 @@ class DatabaseHelper {
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
+
+    await _repairMojibakeDefaultStatuses(db);
+    await _repairCompletedAnimeProgress(db);
 
     // 一次性清理历史遗留的孤立数据（针对旧版本未开启外键的情况）
     await _cleanupOrphanedData(db);
@@ -81,7 +166,9 @@ class DatabaseHelper {
         title TEXT, 
         cover_url TEXT, 
         status TEXT, 
-        rating INTEGER, 
+        rating INTEGER,
+        rating_grade TEXT,
+        fun_rating_tier TEXT,
         review TEXT,
         series_id INTEGER, 
         created_at TEXT, 
@@ -143,7 +230,7 @@ class DatabaseHelper {
     // 插入默认状态
     await _insertDefaultStatuses(db);
 
-    // 创建观看记录表 (版本 6)
+    // 创建观看记录表（版本 6）
     await db.execute('''
       CREATE TABLE IF NOT EXISTS watch_records(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -155,7 +242,7 @@ class DatabaseHelper {
       )
     ''');
 
-    // 创建应用日志表 (版本 7)
+    // 创建应用日志表（版本 7）
     await db.execute('''
       CREATE TABLE IF NOT EXISTS app_logs(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -164,6 +251,143 @@ class DatabaseHelper {
         timestamp TEXT -- ISO8601
       )
     ''');
+
+    await _createAnimeAnalysisRecordsTable(db);
+    await _createCharacterTables(db);
+  }
+
+  Future<void> _createAnimeAnalysisRecordsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS anime_analysis_records(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        server_record_id INTEGER,
+        user_id INTEGER,
+        username TEXT,
+        model TEXT,
+        analysis TEXT,
+        stats_json TEXT,
+        created_at TEXT
+      )
+    ''');
+  }
+
+  Future<void> _createCharacterTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS characters(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        bgm_id INTEGER UNIQUE,
+        name TEXT NOT NULL,
+        name_cn TEXT,
+        image_url TEXT,
+        summary TEXT,
+        gender TEXT,
+        birth_year INTEGER,
+        birth_mon INTEGER,
+        birth_day INTEGER,
+        blood_type TEXT,
+        infobox_json TEXT,
+        rating INTEGER,
+        review TEXT,
+        updated_at TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS anime_characters(
+        anime_id INTEGER NOT NULL,
+        character_id INTEGER NOT NULL,
+        role_name TEXT,
+        sort_order INTEGER DEFAULT 0,
+        PRIMARY KEY (anime_id, character_id),
+        FOREIGN KEY (anime_id) REFERENCES animes (id) ON DELETE CASCADE,
+        FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS character_relations(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_character_id INTEGER NOT NULL,
+        target_character_id INTEGER NOT NULL,
+        relation_type TEXT DEFAULT '关联',
+        note TEXT,
+        strength INTEGER DEFAULT 3,
+        created_at TEXT,
+        updated_at TEXT,
+        UNIQUE(source_character_id, target_character_id),
+        FOREIGN KEY (source_character_id) REFERENCES characters (id) ON DELETE CASCADE,
+        FOREIGN KEY (target_character_id) REFERENCES characters (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS character_tags(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE,
+        color INTEGER,
+        created_at TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS character_tag_links(
+        character_id INTEGER NOT NULL,
+        tag_id INTEGER NOT NULL,
+        PRIMARY KEY (character_id, tag_id),
+        FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES character_tags (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS character_groups(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        cover_url TEXT,
+        community_id TEXT,
+        share_code TEXT,
+        source TEXT DEFAULT 'local',
+        is_public INTEGER DEFAULT 0,
+        extra_json TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS character_group_characters(
+        group_id INTEGER NOT NULL,
+        character_id INTEGER NOT NULL,
+        role_name TEXT,
+        sort_order INTEGER DEFAULT 0,
+        PRIMARY KEY (group_id, character_id),
+        FOREIGN KEY (group_id) REFERENCES character_groups (id) ON DELETE CASCADE,
+        FOREIGN KEY (character_id) REFERENCES characters (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS character_group_works(
+        group_id INTEGER NOT NULL,
+        anime_id INTEGER NOT NULL,
+        sort_order INTEGER DEFAULT 0,
+        PRIMARY KEY (group_id, anime_id),
+        FOREIGN KEY (group_id) REFERENCES character_groups (id) ON DELETE CASCADE,
+        FOREIGN KEY (anime_id) REFERENCES animes (id) ON DELETE CASCADE
+      )
+    ''');
+  }
+
+  Future<void> _addCharacterPersonalFields(Database db) async {
+    await _ensureColumn(db, charactersTable, 'rating', 'rating INTEGER');
+    await _ensureColumn(db, charactersTable, 'review', 'review TEXT');
+  }
+
+  Future<void> _ensureColumn(
+    Database db,
+    String table,
+    String column,
+    String definition,
+  ) async {
+    final columns = await db.rawQuery('PRAGMA table_info($table)');
+    final exists = columns.any((row) => row['name'] == column);
+    if (!exists) {
+      await db.execute('ALTER TABLE $table ADD COLUMN $definition');
+    }
   }
 
   Future<void> _insertDefaultStatuses(Database db) async {
@@ -175,6 +399,83 @@ class DatabaseHelper {
     ];
     for (var s in defaults) {
       await db.insert('watch_statuses', s);
+    }
+  }
+
+  Future<void> _repairMojibakeDefaultStatuses(Database db) async {
+    // 历史版本里曾出现过 UTF-8 被按 GBK 写入的默认状态名。
+    const statusNameFixes = {
+      '\u9366\u3127\u6E45': '在看',
+      '\u942A\u5B2A\u756C': '看完',
+      '\u93C8\uE046\u6E45': '未看',
+      '\u5BEE\u51A8\u6F59': '弃坑',
+      '\u934F\u3129\u503C': '全部',
+    };
+
+    try {
+      for (final entry in statusNameFixes.entries) {
+        final badName = entry.key;
+        final goodName = entry.value;
+
+        await db.update(
+          'animes',
+          {'status': goodName},
+          where: 'status = ?',
+          whereArgs: [badName],
+        );
+
+        final badRows = await db.query(
+          'watch_statuses',
+          columns: ['id'],
+          where: 'name = ?',
+          whereArgs: [badName],
+          limit: 1,
+        );
+        if (badRows.isEmpty) continue;
+
+        final goodRows = await db.query(
+          'watch_statuses',
+          columns: ['id'],
+          where: 'name = ?',
+          whereArgs: [goodName],
+          limit: 1,
+        );
+        final badId = badRows.first['id'] as int;
+
+        if (goodRows.isEmpty) {
+          await db.update(
+            'watch_statuses',
+            {'name': goodName},
+            where: 'id = ?',
+            whereArgs: [badId],
+          );
+        } else {
+          await db.delete(
+            'watch_statuses',
+            where: 'id = ?',
+            whereArgs: [badId],
+          );
+        }
+      }
+    } catch (e) {
+      logger.e("Repair mojibake default statuses error: $e");
+    }
+  }
+
+  Future<void> _repairCompletedAnimeProgress(Database db) async {
+    try {
+      await db.rawUpdate(
+        '''
+        UPDATE animes
+        SET watched_episodes = total_episodes
+        WHERE TRIM(COALESCE(status, '')) = ?
+          AND COALESCE(total_episodes, 0) > 0
+          AND COALESCE(watched_episodes, 0) < total_episodes
+        ''',
+        ['看完'],
+      );
+    } catch (e) {
+      logger.e("Repair completed anime progress error: $e");
     }
   }
 
@@ -240,487 +541,167 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE animes ADD COLUMN reminder_day INTEGER');
       await db.execute('ALTER TABLE animes ADD COLUMN reminder_time TEXT');
     }
-  }
-
-  // ============== 状态管理 (Custom Statuses) ==============
-
-  Future<List<Map<String, dynamic>>> getAllStatuses() async {
-    Database db = await database;
-    return await db.query('watch_statuses', orderBy: 'sort_order ASC');
-  }
-
-  Future<int> insertStatus(String name, int color) async {
-    Database db = await database;
-    try {
-      // 获取当前最大 sort_order
-      final result = await db.rawQuery(
-        'SELECT MAX(sort_order) as max_order FROM watch_statuses',
-      );
-      int maxOrder = (result.first['max_order'] as int?) ?? -1;
-
-      return await db.insert('watch_statuses', {
-        'name': name,
-        'color': color,
-        'sort_order': maxOrder + 1,
-      });
-    } catch (e) {
-      logger.e("Insert status error: $e");
-      return -1; // Duplicate name or error
+    if (oldVersion < 10) {
+      await _repairMojibakeDefaultStatuses(db);
     }
+    if (oldVersion < 11) {
+      await _createAnimeAnalysisRecordsTable(db);
+    }
+    if (oldVersion < 12) {
+      await _createCharacterTables(db);
+    }
+    if (oldVersion < 13) {
+      await _createCharacterTables(db);
+    }
+    if (oldVersion < 14) {
+      await _createCharacterTables(db);
+      await _addCharacterPersonalFields(db);
+    }
+    if (oldVersion < 15) {
+      await _createCharacterTables(db);
+    }
+    if (oldVersion < 16) {
+      await _createCharacterTables(db);
+    }
+    if (oldVersion < 17) {
+      // share_code 列可能已在 _createCharacterTables 中添加，先检查是否存在
+      final columns = await db.rawQuery("PRAGMA table_info(character_groups)");
+      final hasShareCode = columns.any((c) => c['name'] == 'share_code');
+      if (!hasShareCode) {
+        await db.execute(
+          'ALTER TABLE character_groups ADD COLUMN share_code TEXT',
+        );
+      }
+    }
+    if (oldVersion < 18) {
+      await _ensureColumn(db, animesTable, 'rating_grade', 'rating_grade TEXT');
+    }
+    if (oldVersion < 19) {
+      await _ensureColumn(
+        db,
+        animesTable,
+        'fun_rating_tier',
+        'fun_rating_tier TEXT',
+      );
+    }
+  }
+
+  // ============== 向下兼容的 DAO 委托代理 ==============
+
+  // ---- 状态管理 (WatchStatusDao) ----
+  Future<List<Map<String, dynamic>>> getAllStatuses() =>
+      watchStatusDao.getAllStatuses();
+  Future<int> insertStatus(String name, int color) async {
+    final result = await watchStatusDao.insertStatus(name, color);
+    if (result > 0) notifyTableChanged(watchStatusesTable);
+    return result;
   }
 
   Future<int> updateStatus(int id, String name, int color) async {
-    Database db = await database;
-    // 获取旧名称，以便更新 animes 表
-    final oldResult = await db.query(
-      'watch_statuses',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    if (oldResult.isEmpty) return 0;
-    String oldName = oldResult.first['name'] as String;
-
-    return await db.transaction((txn) async {
-      int count = await txn.update(
-        'watch_statuses',
-        {'name': name, 'color': color},
-        where: 'id = ?',
-        whereArgs: [id],
-      );
-      if (oldName != name) {
-        // 同步更新 animes 表中的 status
-        await txn.update(
-          'animes',
-          {'status': name},
-          where: 'status = ?',
-          whereArgs: [oldName],
-        );
-      }
-      return count;
-    });
-  }
-
-  /// 获取所有带有提醒设置的番剧
-  Future<List<Map<String, dynamic>>> getAnimesWithReminders() async {
-    Database db = await database;
-    return await db.query(
-      'animes',
-      where: 'reminder_day IS NOT NULL AND reminder_time IS NOT NULL',
-      orderBy: 'reminder_day ASC, reminder_time ASC',
-    );
+    final result = await watchStatusDao.updateStatus(id, name, color);
+    if (result > 0) notifyTablesChanged([watchStatusesTable, animesTable]);
+    return result;
   }
 
   Future<int> deleteStatus(int id) async {
-    Database db = await database;
-    // 检查是否被使用
-    final statusResult = await db.query(
-      'watch_statuses',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    if (statusResult.isEmpty) return 0;
-    String statusName = statusResult.first['name'] as String;
-
-    final countResult = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM animes WHERE status = ?',
-      [statusName],
-    );
-    int count = (countResult.first['count'] as int?) ?? 0;
-
-    if (count > 0) {
-      // 被使用了，不允许删除 (或者提示用户先迁移)
-      // 这里简便起见，直接抛异常或者返回特定错误码
-      // 或者我们可以约定返回 -2 表示被占用
-      return -2;
-    }
-
-    return await db.delete('watch_statuses', where: 'id = ?', whereArgs: [id]);
+    final result = await watchStatusDao.deleteStatus(id);
+    if (result > 0) notifyTableChanged(watchStatusesTable);
+    return result;
   }
 
-  /// 批量更新状态排序
   Future<void> updateStatusesOrder(List<int> ids) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      for (int i = 0; i < ids.length; i++) {
-        await txn.update(
-          'watch_statuses',
-          {'sort_order': i},
-          where: 'id = ?',
-          whereArgs: [ids[i]],
-        );
-      }
-    });
+    await watchStatusDao.updateStatusesOrder(ids);
+    notifyTableChanged(watchStatusesTable);
   }
 
-  // ============== 观看记录 (Watch Records) ==============
-
-  /// 插入观看记录
+  // ---- 观看记录 (WatchRecordDao) ----
   Future<int> insertWatchRecord({
     required int animeId,
     required int episode,
     String status = 'watched',
     String? date,
   }) async {
-    Database db = await database;
-    final timestamp = date ?? DateTime.now().toIso8601String();
-
-    // 避免同一天重复记录同一集的观看 (简单去重)
-    if (status == 'watched') {
-      final today = timestamp.substring(0, 10);
-      final existing = await db.query(
-        'watch_records',
-        where:
-            'anime_id = ? AND episode = ? AND status = ? AND record_date LIKE ?',
-        whereArgs: [animeId, episode, 'watched', '$today%'],
-      );
-      if (existing.isNotEmpty) return -1;
-    } else if (status == 'completed') {
-      // 避免同一天重复记录完成
-      final today = timestamp.substring(0, 10);
-      final existing = await db.query(
-        'watch_records',
-        where: 'anime_id = ? AND status = ? AND record_date LIKE ?',
-        whereArgs: [animeId, 'completed', '$today%'],
-      );
-      if (existing.isNotEmpty) return -1;
-
-      // 如果同一天已经记录了“观看了最后一集”，则可以考虑删除该条记录，
-      // 因为“看完”已经包含了最后一集的信息。
-      await db.delete(
-        'watch_records',
-        where: 'anime_id = ? AND status = ? AND record_date LIKE ?',
-        whereArgs: [animeId, 'watched', '$today%'],
-      );
-    }
-
-    return await db.insert('watch_records', {
-      'anime_id': animeId,
-      'episode': episode,
-      'status': status,
-      'record_date': timestamp,
-    });
+    final result = await watchRecordDao.insertWatchRecord(
+      animeId: animeId,
+      episode: episode,
+      status: status,
+      date: date,
+    );
+    if (result > 0) notifyTableChanged(watchRecordsTable);
+    return result;
   }
 
-  /// 获取所有观看记录并关联番剧信息
-  /// 增加逻辑：为 'completed' 类型的记录计算这是此番剧的第几次完成
-  Future<List<Map<String, dynamic>>> getAllWatchRecords() async {
-    Database db = await database;
-    final List<Map<String, dynamic>> records = await db.rawQuery('''
-      SELECT wr.*, a.title, a.cover_url, a.subject_type
-      FROM watch_records wr
-      JOIN animes a ON wr.anime_id = a.id
-      ORDER BY wr.record_date ASC
-    ''');
-
-    // 动态计算完成次数
-    Map<int, int> completionCounts = {};
-    List<Map<String, dynamic>> processedRecords = [];
-
-    for (var record in records) {
-      Map<String, dynamic> mutableRecord = Map.from(record);
-      if (record['status'] == 'completed') {
-        int animeId = record['anime_id'];
-        completionCounts[animeId] = (completionCounts[animeId] ?? 0) + 1;
-        mutableRecord['watch_count'] = completionCounts[animeId];
-      }
-      processedRecords.add(mutableRecord);
-    }
-
-    // 返回时按时间倒序排列（保持原有的显示顺序）
-    return processedRecords.reversed.toList();
-  }
-
-  /// 删除特定动漫的所有记录 (通常级联删除已处理)
+  Future<List<Map<String, dynamic>>> getAllWatchRecords() =>
+      watchRecordDao.getAllWatchRecords();
   Future<int> deleteWatchRecordsByAnimeId(int animeId) async {
-    Database db = await database;
-    return await db.delete(
-      'watch_records',
-      where: 'anime_id = ?',
-      whereArgs: [animeId],
-    );
+    final result = await watchRecordDao.deleteWatchRecordsByAnimeId(animeId);
+    if (result > 0) notifyTableChanged(watchRecordsTable);
+    return result;
   }
 
-  /// 手动删除单条观看记录
   Future<int> deleteWatchRecord(int id) async {
-    Database db = await database;
-    return await db.delete('watch_records', where: 'id = ?', whereArgs: [id]);
+    final result = await watchRecordDao.deleteWatchRecord(id);
+    if (result > 0) notifyTableChanged(watchRecordsTable);
+    return result;
   }
 
-  // ============== 动漫记录基础增删改查 ==============
-
-  /// 插入新的动漫记录
+  // ---- 动漫基础 CRUD 及统计、提醒 (AnimeDao) ----
   Future<int> insertAnime(Map<String, dynamic> row) async {
-    Database db = await database;
-    return await db.insert('animes', row);
+    final result = await animeDao.insertAnime(row);
+    if (result > 0) notifyTableChanged(animesTable);
+    return result;
   }
 
-  /// 更新现有动漫记录
   Future<int> updateAnime(Map<String, dynamic> row) async {
-    Database db = await database;
-    return await db.update(
-      'animes',
-      row,
-      where: 'id = ?',
-      whereArgs: [row['id']],
-    );
+    final result = await animeDao.updateAnime(row);
+    if (result > 0) notifyTableChanged(animesTable);
+    return result;
   }
 
-  /// 删除动漫记录
+  Future<void> updateFunRatingTier(int animeId, String? tier) async {
+    final result = await animeDao.updateFunRatingTier(animeId, tier);
+    if (result > 0) notifyTableChanged(animesTable);
+  }
+
+  Future<void> clearFunRatingTiers() async {
+    final result = await animeDao.clearFunRatingTiers();
+    if (result > 0) notifyTableChanged(animesTable);
+  }
+
   Future<int> deleteAnime(int id) async {
-    Database db = await database;
-    return await db.delete('animes', where: 'id = ?', whereArgs: [id]);
-  }
-
-  /// 查询所有动漫记录（按 ID 倒序）
-  Future<List<Map<String, dynamic>>> queryAllAnimes() async {
-    Database db = await database;
-    return await db.query('animes', orderBy: "id DESC");
-  }
-
-  /// 获取单个动漫详情
-  Future<Map<String, dynamic>?> getAnimeById(int id) async {
-    Database db = await database;
-    List<Map<String, dynamic>> maps = await db.query(
-      'animes',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    if (maps.isNotEmpty) return maps.first;
-    return null;
-  }
-
-  // ============== 系列功能 ==============
-
-  /// 创建新系列
-  Future<int> createSeries(String name, {String? description}) async {
-    Database db = await database;
-    return await db.insert('series', {
-      'name': name,
-      'description': description,
-      'created_at': DateTime.now().toIso8601String(),
-    });
-  }
-
-  /// 获取单个系列详情
-  Future<Map<String, dynamic>?> getSeriesById(int id) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'series',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    if (maps.isEmpty) return null;
-    return maps.first;
-  }
-
-  /// 获取所有系列，并提取统计信息
-  Future<List<Map<String, dynamic>>> getAllSeries() async {
-    Database db = await database;
-    // 使用聚合查询获取系列信息、番剧数量以及最新一部番剧的封面
-    // 同时也保留 custom_cover_url
-    return await db.rawQuery('''
-      SELECT 
-        s.*, 
-        COUNT(a.id) as anime_count,
-        (SELECT cover_url FROM animes WHERE series_id = s.id ORDER BY id DESC LIMIT 1) as default_cover_url
-      FROM series s
-      LEFT JOIN animes a ON s.id = a.series_id
-      GROUP BY s.id
-      ORDER BY s.created_at DESC
-    ''');
-  }
-
-  /// 更新系列信息
-  Future<int> updateSeries(int id, Map<String, dynamic> row) async {
-    Database db = await database;
-    return await db.update('series', row, where: 'id = ?', whereArgs: [id]);
-  }
-
-  /// 删除系列（关联的动漫将 series_id 置为 null）
-  Future<void> deleteSeries(int id) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      // 1. 将该系列下的动漫 series_id 置空
-      await txn.update(
-        'animes',
-        {'series_id': null},
-        where: 'series_id = ?',
-        whereArgs: [id],
-      );
-      // 2. 删除系列
-      await txn.delete('series', where: 'id = ?', whereArgs: [id]);
-    });
-  }
-
-  /// 获取特定系列下的所有动漫
-  Future<List<Map<String, dynamic>>> getAnimesInSeries(int seriesId) async {
-    Database db = await database;
-    return await db.rawQuery(
-      'SELECT a.*, s.name as series_name FROM animes a '
-      'LEFT JOIN series s ON a.series_id = s.id '
-      'WHERE a.series_id = ? ORDER BY a.air_date ASC',
-      [seriesId],
-    );
-  }
-
-  /// 更新动漫所属系列
-  Future<void> updateAnimeSeries(int animeId, int? seriesId) async {
-    Database db = await database;
-    await db.update(
-      'animes',
-      {'series_id': seriesId},
-      where: 'id = ?',
-      whereArgs: [animeId],
-    );
-  }
-
-  /// 获取所有不属于任何系列的番剧
-  Future<List<Map<String, dynamic>>> getAnimesWithoutSeries() async {
-    Database db = await database;
-    return await db.query(
-      'animes',
-      where: 'series_id IS NULL',
-      orderBy: 'title ASC',
-    );
-  }
-
-  /// 批量更新动漫所属系列
-  Future<void> batchUpdateAnimesSeries(List<int> animeIds, int seriesId) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      for (int id in animeIds) {
-        await txn.update(
-          'animes',
-          {'series_id': seriesId},
-          where: 'id = ?',
-          whereArgs: [id],
-        );
-      }
-    });
-  }
-
-  // ============== 标签管理功能 ==============
-
-  /// 创建新标签（自动去重）
-  ///
-  /// [name] 标签名称
-  /// 返回标签 ID，如果标签已存在则返回 -1
-  Future<int> insertTag(String name) async {
-    Database db = await database;
-
-    // 1. 去除首尾空格
-    final cleanName = name.trim();
-
-    // 2. 检查同名标签是否存在
-    final List<Map<String, dynamic>> existing = await db.query(
-      'tags',
-      where: 'name = ?',
-      whereArgs: [cleanName],
-    );
-
-    if (existing.isNotEmpty) {
-      return -1; // 标签已存在
+    final result = await animeDao.deleteAnime(id);
+    if (result > 0) {
+      notifyTablesChanged([animesTable, animeTagsTable, watchRecordsTable]);
     }
-
-    // 3. 插入新标签（使用默认颜色）
-    return await db.insert('tags', {'name': cleanName, 'color': 0xFF2196F3});
+    return result;
   }
 
-  /// 更新标签名称
-  Future<int> updateTag(int id, String newName) async {
-    Database db = await database;
-    return await db.update(
-      'tags',
-      {'name': newName},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+  Future<List<Map<String, dynamic>>> queryAllAnimes() =>
+      animeDao.queryAllAnimes();
+  Future<Map<String, dynamic>?> getAnimeById(int id) =>
+      animeDao.getAnimeById(id);
+  Future<Map<String, dynamic>?> getAnimeByTitle(String title) =>
+      animeDao.getAnimeByTitle(title);
+  Future<List<Map<String, dynamic>>> getAnimesWithoutSeries() =>
+      animeDao.getAnimesWithoutSeries();
+  Future<void> updateAnimeSeries(int animeId, int? seriesId) async {
+    await animeDao.updateAnimeSeries(animeId, seriesId);
+    notifyTableChanged(animesTable);
   }
 
-  /// 删除标签（彻底删除及其关联记录）
-  Future<void> deleteTag(int id) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      // 1. 删除标签关联记录
-      await txn.delete('anime_tags', where: 'tag_id = ?', whereArgs: [id]);
-      // 2. 删除标签本身
-      await txn.delete('tags', where: 'id = ?', whereArgs: [id]);
-    });
+  Future<void> batchUpdateStatus(List<int> animeIds, String newStatus) async {
+    await animeDao.batchUpdateStatus(animeIds, newStatus);
+    notifyTableChanged(animesTable);
   }
 
-  /// 获取所有标签（按名称升序排序）
-  Future<List<Map<String, dynamic>>> getAllTags() async {
-    Database db = await database;
-    return await db.query('tags', orderBy: 'name ASC');
+  Future<void> batchUpdateAnimesSeries(List<int> animeIds, int seriesId) async {
+    await animeDao.batchUpdateAnimesSeries(animeIds, seriesId);
+    notifyTablesChanged([animesTable, seriesTable]);
   }
 
-  /// 为动漫添加标签
-  Future<void> addTagToAnime(int animeId, int tagId) async {
-    Database db = await database;
-    await db.insert('anime_tags', {
-      'anime_id': animeId,
-      'tag_id': tagId,
-    }, conflictAlgorithm: ConflictAlgorithm.ignore);
-  }
-
-  /// 更新动漫的标签集合
-  Future<void> updateAnimeTags(int animeId, Set<int> tagIds) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      // 1. 删除该动漫的所有现有标签
-      await txn.delete(
-        'anime_tags',
-        where: 'anime_id = ?',
-        whereArgs: [animeId],
-      );
-
-      // 2. 插入新的标签集合
-      for (int tagId in tagIds) {
-        await txn.insert('anime_tags', {
-          'anime_id': animeId,
-          'tag_id': tagId,
-        }, conflictAlgorithm: ConflictAlgorithm.ignore);
-      }
-    });
-  }
-
-  /// 根据动漫 ID 获取其所有标签
-  Future<List<Map<String, dynamic>>> getTagsByAnimeId(int animeId) async {
-    Database db = await database;
-    return await db.rawQuery(
-      '''
-      SELECT t.id, t.name 
-      FROM tags t 
-      INNER JOIN anime_tags at ON t.id = at.tag_id 
-      WHERE at.anime_id = ?
-    ''',
-      [animeId],
-    );
-  }
-
-  // ============== 辅助方法 ==============
-
-  /// 获取所有不重复的制作公司列表（按字母顺序排序）
-  Future<List<String>> getAllStudios() async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.rawQuery('''
-      SELECT DISTINCT studio 
-      FROM animes 
-      WHERE studio IS NOT NULL AND studio != '' 
-      ORDER BY studio ASC
-    ''');
-    return maps.map((row) => row['studio'] as String).toList();
-  }
-
-  // ============== 高级搜索功能 ==============
-
-  /// 多条件搜索动漫记录
-  ///
-  /// [query] 搜索关键词（标题、制作公司、评论）
-  /// [tagIds] 要筛选的标签 ID 列表
-  /// [status] 动漫状态筛选
-  /// [isAndMode] 标签筛选模式：true=AND（同时满足所有标签），false=OR（满足任意标签）
-  /// [sortOption] 排序规则，默认为 ID 倒序
+  Future<List<String>> getAllStudios() => animeDao.getAllStudios();
+  Future<List<Map<String, dynamic>>> getAnimesWithReminders() =>
+      animeDao.getAnimesWithReminders();
   Future<List<Map<String, dynamic>>> searchAnimes({
     String? query,
     List<int>? tagIds,
@@ -729,88 +710,370 @@ class DatabaseHelper {
     List<String>? years,
     bool isAndMode = false,
     String sortOption = 'a.id DESC',
-  }) async {
-    Database db = await database;
+  }) => animeDao.searchAnimes(
+    query: query,
+    tagIds: tagIds,
+    status: status,
+    subjectType: subjectType,
+    years: years,
+    isAndMode: isAndMode,
+    sortOption: sortOption,
+  );
+  Future<Map<String, int>> getStatusCounts() => animeDao.getStatusCounts();
+  Future<Map<String, int>> getSubjectTypeCounts() =>
+      animeDao.getSubjectTypeCounts();
 
-    // 构建 SQL 查询
-    String sql =
-        'SELECT a.*, s.name as series_name FROM animes a '
-        'LEFT JOIN series s ON a.series_id = s.id ';
-    List<dynamic> args = [];
-
-    // 处理标签筛选
-    if (tagIds != null && tagIds.isNotEmpty) {
-      sql += 'JOIN anime_tags at ON a.id = at.anime_id ';
-    }
-
-    sql += 'WHERE 1=1 ';
-
-    // 添加类型筛选条件
-    if (subjectType != null && subjectType != 'all') {
-      sql += 'AND a.subject_type = ? ';
-      args.add(subjectType);
-    }
-
-    // 添加年份筛选条件 (多选支持)
-    if (years != null && years.isNotEmpty) {
-      String yearPlaceholders = List.filled(
-        years.length,
-        'a.air_date LIKE ?',
-      ).join(' OR ');
-      sql += 'AND ($yearPlaceholders) ';
-      for (var y in years) {
-        args.add('$y%');
-      }
-    }
-
-    // 添加标签筛选条件
-    if (tagIds != null && tagIds.isNotEmpty) {
-      String placeholders = List.filled(tagIds.length, '?').join(',');
-      sql += 'AND at.tag_id IN ($placeholders) ';
-      args.addAll(tagIds);
-    }
-
-    // 添加状态筛选条件
-    if (status != null && status != '全部') {
-      sql += 'AND a.status = ? ';
-      args.add(status);
-    }
-
-    // 添加关键词搜索条件
-    if (query != null && query.isNotEmpty) {
-      sql += 'AND (a.title LIKE ? OR a.studio LIKE ? OR a.review LIKE ?) ';
-      String likeQuery = '%$query%';
-      args.add(likeQuery);
-      args.add(likeQuery);
-      args.add(likeQuery);
-    }
-
-    // 分组和标签匹配模式
-    if (tagIds != null && tagIds.isNotEmpty) {
-      sql += 'GROUP BY a.id ';
-      if (isAndMode) {
-        sql += 'HAVING COUNT(DISTINCT at.tag_id) = ? ';
-        args.add(tagIds.length);
-      }
-    } else {
-      sql += 'GROUP BY a.id ';
-    }
-
-    // 应用排序规则
-    sql += 'ORDER BY $sortOption';
-
-    return await db.rawQuery(sql, args);
+  // ---- 系列功能 (SeriesDao) ----
+  Future<int> createSeries(String name, {String? description}) async {
+    final result = await seriesDao.createSeries(name, description: description);
+    if (result > 0) notifyTableChanged(seriesTable);
+    return result;
   }
 
-  // 搜索系列
-  Future<List<Map<String, dynamic>>> searchSeries(String query) async {
-    Database db = await database;
-    return await db.query(
-      'series',
-      where: 'name LIKE ?',
-      whereArgs: ['%$query%'],
-      orderBy: 'created_at DESC',
+  Future<Map<String, dynamic>?> getSeriesById(int id) =>
+      seriesDao.getSeriesById(id);
+  Future<List<Map<String, dynamic>>> getAllSeries() => seriesDao.getAllSeries();
+  Future<int> updateSeries(int id, Map<String, dynamic> row) async {
+    final result = await seriesDao.updateSeries(id, row);
+    if (result > 0) notifyTableChanged(seriesTable);
+    return result;
+  }
+
+  Future<void> deleteSeries(int id) async {
+    await seriesDao.deleteSeries(id);
+    notifyTablesChanged([seriesTable, animesTable]);
+  }
+
+  Future<List<Map<String, dynamic>>> getAnimesInSeries(int seriesId) =>
+      seriesDao.getAnimesInSeries(seriesId);
+  Future<List<Map<String, dynamic>>> searchSeries(String query) =>
+      seriesDao.searchSeries(query);
+
+  // ---- 标签管理及批量操作 (TagDao) ----
+  Future<int> insertTag(String name) async {
+    final result = await tagDao.insertTag(name);
+    if (result > 0) notifyTableChanged(tagsTable);
+    return result;
+  }
+
+  Future<int> updateTag(int id, String newName) async {
+    final result = await tagDao.updateTag(id, newName);
+    if (result > 0) notifyTableChanged(tagsTable);
+    return result;
+  }
+
+  Future<void> deleteTag(int id) async {
+    await tagDao.deleteTag(id);
+    notifyTablesChanged([tagsTable, animeTagsTable]);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllTags() => tagDao.getAllTags();
+  Future<void> addTagToAnime(int animeId, int tagId) async {
+    await tagDao.addTagToAnime(animeId, tagId);
+    notifyTableChanged(animeTagsTable);
+  }
+
+  Future<void> updateAnimeTags(int animeId, Set<int> tagIds) async {
+    await tagDao.updateAnimeTags(animeId, tagIds);
+    notifyTableChanged(animeTagsTable);
+  }
+
+  Future<List<Map<String, dynamic>>> getTagsByAnimeId(int animeId) =>
+      tagDao.getTagsByAnimeId(animeId);
+  Future<void> batchAddTagToAnimes(List<int> animeIds, int tagId) async {
+    await tagDao.batchAddTagToAnimes(animeIds, tagId);
+    notifyTableChanged(animeTagsTable);
+  }
+
+  Future<void> batchRemoveTagFromAnimes(List<int> animeIds, int tagId) async {
+    await tagDao.batchRemoveTagFromAnimes(animeIds, tagId);
+    notifyTableChanged(animeTagsTable);
+  }
+
+  Future<List<Map<String, dynamic>>> getTagCounts() => tagDao.getTagCounts();
+
+  // ---- 角色管理 (CharacterDao) ----
+  Future<int> upsertCharacter(Map<String, dynamic> row) async {
+    final result = await characterDao.upsertCharacter(row);
+    if (result > 0) notifyTableChanged(charactersTable);
+    return result;
+  }
+
+  Future<int> updateCharacterPersonalReview({
+    required int characterId,
+    int? rating,
+    String? review,
+  }) async {
+    final result = await characterDao.updateCharacterPersonalReview(
+      characterId: characterId,
+      rating: rating,
+      review: review,
     );
+    if (result > 0) notifyTableChanged(charactersTable);
+    return result;
+  }
+
+  Future<void> addCharacterToAnime({
+    required int animeId,
+    required int characterId,
+    String? roleName,
+  }) async {
+    await characterDao.addCharacterToAnime(
+      animeId: animeId,
+      characterId: characterId,
+      roleName: roleName,
+    );
+    notifyTableChanged(animeCharactersTable);
+  }
+
+  Future<void> removeCharacterFromAnime({
+    required int animeId,
+    required int characterId,
+  }) async {
+    await characterDao.removeCharacterFromAnime(
+      animeId: animeId,
+      characterId: characterId,
+    );
+    notifyTableChanged(animeCharactersTable);
+  }
+
+  Future<List<Map<String, dynamic>>> getCharactersByAnimeId(int animeId) =>
+      characterDao.getCharactersByAnimeId(animeId);
+
+  Future<List<Map<String, dynamic>>> getAllCharacters({String? query}) =>
+      characterDao.getAllCharacters(query: query);
+
+  Future<int> createCharacterTag(String name) async {
+    final result = await characterDao.createCharacterTag(name);
+    if (result > 0) notifyTableChanged(characterTagsTable);
+    return result;
+  }
+
+  Future<List<Map<String, dynamic>>> getAllCharacterTags() =>
+      characterDao.getAllCharacterTags();
+
+  Future<List<Map<String, dynamic>>> getCharacterTags(int characterId) =>
+      characterDao.getCharacterTags(characterId);
+
+  Future<void> updateCharacterTags({
+    required int characterId,
+    required Set<int> tagIds,
+  }) async {
+    await characterDao.updateCharacterTags(
+      characterId: characterId,
+      tagIds: tagIds,
+    );
+    notifyTablesChanged([
+      charactersTable,
+      characterTagsTable,
+      characterTagLinksTable,
+    ]);
+  }
+
+  Future<int> upsertCharacterGroup({
+    int? groupId,
+    required String name,
+    String? description,
+    required List<int> characterIds,
+    required List<int> workIds,
+  }) async {
+    final result = await characterDao.upsertCharacterGroup(
+      groupId: groupId,
+      name: name,
+      description: description,
+      characterIds: characterIds,
+      workIds: workIds,
+    );
+    if (result > 0) {
+      notifyTablesChanged([
+        characterGroupsTable,
+        characterGroupCharactersTable,
+        characterGroupWorksTable,
+      ]);
+    }
+    return result;
+  }
+
+  Future<CharacterGroupImportResult> importCharacterGroupPackage(
+    CharacterGroupPackage package, {
+    String source = 'community',
+  }) async {
+    final result = await characterDao.importCharacterGroupPackage(
+      package,
+      source: source,
+    );
+    notifyTablesChanged([
+      animesTable,
+      charactersTable,
+      characterGroupsTable,
+      characterGroupCharactersTable,
+      characterGroupWorksTable,
+    ]);
+    return result;
+  }
+
+  Future<void> deleteCharacterGroup(int groupId) async {
+    await characterDao.deleteCharacterGroup(groupId);
+    notifyTablesChanged([
+      characterGroupsTable,
+      characterGroupCharactersTable,
+      characterGroupWorksTable,
+    ]);
+  }
+
+  Future<void> updateCharacterGroupCommunityInfo({
+    required int groupId,
+    String? communityId,
+    String? shareCode,
+  }) async {
+    await characterDao.updateCharacterGroupCommunityInfo(
+      groupId: groupId,
+      communityId: communityId,
+      shareCode: shareCode,
+    );
+    notifyTablesChanged([characterGroupsTable]);
+  }
+
+  Future<List<Map<String, dynamic>>> getCharacterGroups({String? query}) =>
+      characterDao.getCharacterGroups(query: query);
+
+  Future<List<Map<String, dynamic>>> getCharacterGroupCharacters(int groupId) =>
+      characterDao.getCharacterGroupCharacters(groupId);
+
+  Future<List<Map<String, dynamic>>> getCharacterGroupWorks(int groupId) =>
+      characterDao.getCharacterGroupWorks(groupId);
+
+  Future<CharacterGroupPackage> exportCharacterGroupPackage(int groupId) =>
+      characterDao.exportCharacterGroupPackage(groupId);
+
+  Future<List<Map<String, dynamic>>> searchGroupableWorks({
+    String? query,
+    String subjectType = 'all',
+    int limit = 120,
+  }) => characterDao.searchGroupableWorks(
+    query: query,
+    subjectType: subjectType,
+    limit: limit,
+  );
+
+  Future<Set<int>> getAnimeIdsByCharacterIds(List<int> characterIds) =>
+      characterDao.getAnimeIdsByCharacterIds(characterIds);
+
+  Future<List<Map<String, dynamic>>> getRelationCandidates({
+    required int sourceCharacterId,
+    String? query,
+    int limit = 80,
+  }) => characterDao.getRelationCandidates(
+    sourceCharacterId: sourceCharacterId,
+    query: query,
+    limit: limit,
+  );
+
+  Future<Map<String, dynamic>?> getCharacterById(int characterId) =>
+      characterDao.getCharacterById(characterId);
+
+  Future<List<Map<String, dynamic>>> getWorksByCharacterId(int characterId) =>
+      characterDao.getWorksByCharacterId(characterId);
+
+  Future<List<Map<String, dynamic>>> getWorksLinkedToCharacterMissingFrom({
+    required int fromCharacterId,
+    required int missingFromCharacterId,
+  }) => characterDao.getWorksLinkedToCharacterMissingFrom(
+    fromCharacterId: fromCharacterId,
+    missingFromCharacterId: missingFromCharacterId,
+  );
+
+  Future<List<Map<String, dynamic>>> searchLinkableWorks({
+    required int characterId,
+    String? query,
+    String subjectType = 'all',
+    int limit = 60,
+  }) => characterDao.searchLinkableWorks(
+    characterId: characterId,
+    query: query,
+    subjectType: subjectType,
+    limit: limit,
+  );
+
+  Future<int> upsertCharacterRelation({
+    required int sourceCharacterId,
+    required int targetCharacterId,
+    String relationType = '关联',
+    String? note,
+    int strength = 3,
+  }) async {
+    final result = await characterDao.upsertCharacterRelation(
+      sourceCharacterId: sourceCharacterId,
+      targetCharacterId: targetCharacterId,
+      relationType: relationType,
+      note: note,
+      strength: strength,
+    );
+    if (result > 0) notifyTableChanged(characterRelationsTable);
+    return result;
+  }
+
+  Future<void> deleteCharacterRelation(int relationId) async {
+    await characterDao.deleteCharacterRelation(relationId);
+    notifyTableChanged(characterRelationsTable);
+  }
+
+  Future<List<Map<String, dynamic>>> getCharacterRelations(int characterId) =>
+      characterDao.getCharacterRelations(characterId);
+
+  Future<List<List<Map<String, dynamic>>>> findDuplicateCharacters() =>
+      characterDao.findDuplicateCharacters();
+
+  Future<void> deleteCharacter(int characterId) async {
+    await characterDao.deleteCharacter(characterId);
+    notifyTablesChanged([
+      charactersTable,
+      animeCharactersTable,
+      characterRelationsTable,
+      characterTagLinksTable,
+      characterGroupCharactersTable,
+    ]);
+  }
+
+  // ---- 日志管理 (LogDao) ----
+  Future<int> insertLog(String message, String? stackTrace) =>
+      logDao.insertLog(message, stackTrace);
+  Future<List<Map<String, dynamic>>> getLogs() => logDao.getLogs();
+  Future<int> clearOldLogs() => logDao.clearOldLogs();
+
+  // ---- AI 看番风格分析记录 ----
+  Future<int> insertAnimeAnalysisRecord(Map<String, dynamic> row) async {
+    final db = await database;
+    final result = await db.insert(animeAnalysisRecordsTable, row);
+    if (result > 0) notifyTableChanged(animeAnalysisRecordsTable);
+    return result;
+  }
+
+  Future<List<Map<String, dynamic>>> getAnimeAnalysisRecords({
+    int? userId,
+  }) async {
+    final db = await database;
+    return db.query(
+      animeAnalysisRecordsTable,
+      where: userId == null ? null : 'user_id = ?',
+      whereArgs: userId == null ? null : [userId],
+      orderBy: 'created_at DESC, id DESC',
+    );
+  }
+
+  Future<Map<String, dynamic>?> getLatestAnimeAnalysisRecord({
+    int? userId,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      animeAnalysisRecordsTable,
+      where: userId == null ? null : 'user_id = ?',
+      whereArgs: userId == null ? null : [userId],
+      orderBy: 'created_at DESC, id DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return rows.first;
   }
 
   // ============== 数据库管理 ==============
@@ -828,173 +1091,11 @@ class DatabaseHelper {
     }
   }
 
-  // ============== 批量操作功能 ==============
-
-  /// 批量更新动漫状态
-  Future<void> batchUpdateStatus(List<int> animeIds, String newStatus) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      for (int id in animeIds) {
-        await txn.update(
-          'animes',
-          {'status': newStatus},
-          where: 'id = ?',
-          whereArgs: [id],
-        );
-      }
-    });
-  }
-
-  /// 批量添加标签到多个动漫
-  Future<void> batchAddTagToAnimes(List<int> animeIds, int tagId) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      for (int animeId in animeIds) {
-        await txn.insert('anime_tags', {
-          'anime_id': animeId,
-          'tag_id': tagId,
-        }, conflictAlgorithm: ConflictAlgorithm.ignore);
-      }
-    });
-  }
-
-  /// 批量从多个动漫移除标签
-  Future<void> batchRemoveTagFromAnimes(List<int> animeIds, int tagId) async {
-    Database db = await database;
-    await db.transaction((txn) async {
-      for (int animeId in animeIds) {
-        await txn.delete(
-          'anime_tags',
-          where: 'anime_id = ? AND tag_id = ?',
-          whereArgs: [animeId, tagId],
-        );
-      }
-    });
-  }
-
-  // ============== 查重功能 ==============
-
-  /// 根据标题查找动漫（用于检测重复记录）
-  ///
-  /// [title] 动漫标题
-  /// 返回匹配的动漫记录，若无匹配则返回 null
-  Future<Map<String, dynamic>?> getAnimeByTitle(String title) async {
-    Database db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'animes',
-      where: 'title = ?',
-      whereArgs: [title],
-      limit: 1,
-    );
-    if (maps.isNotEmpty) {
-      return maps.first;
+  Future<void> dispose() async {
+    await closeDatabase();
+    for (final controller in _tableControllers.values) {
+      await controller.close();
     }
-    return null;
-  }
-
-  // ============== 统计功能 ==============
-
-  /// 统计各状态动漫数量
-  Future<Map<String, int>> getStatusCounts() async {
-    Database db = await database;
-
-    // 按状态分组统计
-    final List<Map<String, dynamic>> result = await db.rawQuery('''
-      SELECT status, COUNT(*) as count 
-      FROM animes 
-      GROUP BY status
-    ''');
-
-    // 初始化默认值，确保所有状态都有计数
-    Map<String, int> counts = {'在看': 0, '看完': 0, '未看': 0, '弃坑': 0};
-
-    // 填充实际统计结果
-    for (var row in result) {
-      if (row['status'] != null) {
-        counts[row['status'] as String] = row['count'] as int;
-      }
-    }
-
-    return counts;
-  }
-
-  /// 统计各类型（番剧/小说）动漫数量
-  Future<Map<String, int>> getSubjectTypeCounts() async {
-    Database db = await database;
-
-    final List<Map<String, dynamic>> result = await db.rawQuery('''
-      SELECT subject_type, COUNT(*) as count 
-      FROM animes 
-      GROUP BY subject_type
-    ''');
-
-    Map<String, int> counts = {'anime': 0, 'book': 0};
-
-    for (var row in result) {
-      String? type = row['subject_type'] as String?;
-      if (type != null) {
-        counts[type] = row['count'] as int;
-      }
-    }
-
-    return counts;
-  }
-
-  /// 统计每个标签的使用次数（按使用次数降序排列）
-  Future<List<Map<String, dynamic>>> getTagCounts() async {
-    Database db = await database;
-    return await db.rawQuery('''
-      SELECT t.id, t.name, COUNT(at.anime_id) as count 
-      FROM tags t 
-      LEFT JOIN anime_tags at ON t.id = at.tag_id 
-      GROUP BY t.id 
-      ORDER BY count DESC
-    ''');
-  }
-
-  // ============== 日志管理 (App Logs) ==============
-
-  /// 插入日志
-  Future<int> insertLog(String message, String? stackTrace) async {
-    try {
-      Database db = await database;
-      return await db.insert('app_logs', {
-        'message': message,
-        'stack_trace': stackTrace ?? '',
-        'timestamp': DateTime.now().toIso8601String(),
-      });
-    } catch (e) {
-      logger.e("Insert log error: $e");
-      return -1;
-    }
-  }
-
-  /// 获取所有日志 (按时间倒序)
-  Future<List<Map<String, dynamic>>> getLogs() async {
-    try {
-      Database db = await database;
-      return await db.query('app_logs', orderBy: 'timestamp DESC');
-    } catch (e) {
-      logger.e("Query logs error: $e");
-      return [];
-    }
-  }
-
-  /// 清理旧日志 (24 小时前)
-  Future<int> clearOldLogs() async {
-    try {
-      Database db = await database;
-      final twentyFourHoursAgo = DateTime.now()
-          .subtract(const Duration(hours: 24))
-          .toIso8601String();
-      return await db.delete(
-        'app_logs',
-        where: 'timestamp < ?',
-        whereArgs: [twentyFourHoursAgo],
-      );
-    } catch (e) {
-      logger.e("Clear old logs error: $e");
-      return 0;
-    }
+    _tableControllers.clear();
   }
 }

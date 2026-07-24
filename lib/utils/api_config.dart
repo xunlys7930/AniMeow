@@ -45,10 +45,7 @@ class ApiConfig {
       return parsed;
     }
     return parsed.replace(
-      queryParameters: {
-        ...parsed.queryParameters,
-        ...queryParameters,
-      },
+      queryParameters: {...parsed.queryParameters, ...queryParameters},
     );
   }
 }

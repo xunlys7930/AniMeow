@@ -8,6 +8,7 @@ import '../design_tokens.dart';
 import 'home_layout.dart';
 import '_shared/anime_poster_card.dart';
 import '_shared/rating_icon.dart';
+import '../../utils/anime_rating.dart';
 
 /// 沉浸海报墙（封面铺满 + 长按 BlurSheet 信息浮层）
 ///
@@ -31,17 +32,17 @@ class PosterWallView extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(),
           children: const [
             SizedBox(height: 200),
-            EmptyStateWidget(
-              message: '还没添加番剧',
-              buttonText: '去添加一部吧',
-            ),
+            EmptyStateWidget(message: '还没添加番剧', buttonText: '去添加一部吧'),
           ],
         ),
       );
     }
 
     final cols = props.gridColumns;
-    final aspectRatio = props.titlePosition == 'below_cover' ? 0.55 : 0.66;
+    final useTallPoster =
+        props.titlePosition == 'below_cover' ||
+        props.badgeStyle == BadgeStyle.bottomBar;
+    final aspectRatio = useTallPoster ? 0.55 : 0.66;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -58,6 +59,7 @@ class PosterWallView extends StatelessWidget {
           return false;
         },
         child: GridView.builder(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
             AppSpacing.md,
@@ -139,7 +141,7 @@ class _PeekSheet extends StatelessWidget {
     final studio = (item['studio'] ?? '').toString().trim();
     final seriesName = (item['series_name'] ?? '').toString().trim();
     final subjectType = (item['subject_type'] ?? 'anime').toString();
-    final rating = item['rating'];
+    final rating = animeRatingOf(item);
 
     final total = (item['total_episodes'] as int?) ?? 0;
     final watched = (item['watched_episodes'] as int?) ?? 0;
@@ -192,7 +194,9 @@ class _PeekSheet extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                    borderRadius: BorderRadius.circular(
+                      props.coverBorderRadius,
+                    ),
                     child: SizedBox(
                       width: 100,
                       height: 140,
@@ -210,11 +214,9 @@ class _PeekSheet extends StatelessWidget {
                         Text(
                           _isSeries
                               ? (item['name'] ?? item['series_name'] ?? '')
-                                  .toString()
+                                    .toString()
                               : (item['title'] ?? '').toString(),
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
+                          style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.2,
@@ -227,9 +229,7 @@ class _PeekSheet extends StatelessWidget {
                         if (_buildSubLine(studio, seriesName).isNotEmpty)
                           Text(
                             _buildSubLine(studio, seriesName),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
+                            style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                   fontWeight: FontWeight.w600,
@@ -250,22 +250,18 @@ class _PeekSheet extends StatelessWidget {
                               )
                             else ...[
                               if (status.isNotEmpty)
-                                StatusBadge(
-                                  status: status,
-                                  color: statusColor,
-                                ),
+                                StatusBadge(status: status, color: statusColor),
                               _PeekChip(
                                 icon: subjectType == 'anime'
                                     ? Icons.movie_outlined
                                     : Icons.menu_book_outlined,
-                                text:
-                                    subjectType == 'anime' ? '番剧' : '漫画',
+                                text: subjectType == 'anime' ? '番剧' : '漫画',
                                 color: colorScheme.onSurfaceVariant,
                               ),
-                              if (rating is num && rating > 0)
+                              if (rating.hasValue)
                                 _PeekChip(
                                   leading: const RatingIconWidget(size: 13),
-                                  text: rating.toStringAsFixed(1),
+                                  text: rating.label,
                                   color: Colors.amber[800]!,
                                 ),
                             ],
@@ -285,11 +281,10 @@ class _PeekSheet extends StatelessWidget {
                   children: [
                     Text(
                       '观看进度',
-                      style:
-                          Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                                letterSpacing: 1.0,
-                              ),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        letterSpacing: 1.0,
+                      ),
                     ),
                     Text(
                       props.progressTextOf(item),
@@ -383,8 +378,10 @@ class _PeekChip extends StatelessWidget {
     this.leading,
     required this.text,
     required this.color,
-  }) : assert(icon != null || leading != null,
-            'either icon or leading must be provided');
+  }) : assert(
+         icon != null || leading != null,
+         'either icon or leading must be provided',
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -393,10 +390,7 @@ class _PeekChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppRadius.xs),
-        border: Border.all(
-          color: color.withValues(alpha: 0.3),
-          width: 0.5,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

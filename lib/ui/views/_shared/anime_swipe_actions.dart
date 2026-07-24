@@ -61,10 +61,10 @@ class SwipeActionTile extends StatelessWidget {
     return Dismissible(
       key: dismissKey,
       direction: _direction,
-      // 高 threshold 让"假删除"更需要刻意滑动，避免误触
+      // 稍高的 threshold 让快捷动作更需要刻意滑动，降低误触概率。
       dismissThresholds: const {
-        DismissDirection.startToEnd: 0.32,
-        DismissDirection.endToStart: 0.32,
+        DismissDirection.startToEnd: 0.42,
+        DismissDirection.endToStart: 0.42,
       },
       background: _buildBackground(
         alignment: Alignment.centerLeft,
@@ -126,6 +126,104 @@ class SwipeActionTile extends StatelessWidget {
   }
 }
 
+class _SwipeUndoSnapshot {
+  final int id;
+  final String title;
+  final int watchedEpisodes;
+  final String status;
+  final String? watchFinishDate;
+
+  const _SwipeUndoSnapshot({
+    required this.id,
+    required this.title,
+    required this.watchedEpisodes,
+    required this.status,
+    required this.watchFinishDate,
+  });
+
+  factory _SwipeUndoSnapshot.from(Map<String, dynamic> item) {
+    final rawFinishDate = item['watch_finish_date']?.toString();
+    return _SwipeUndoSnapshot(
+      id: _asInt(item['id']) ?? 0,
+      title: _titleOf(item),
+      watchedEpisodes: _asInt(item['watched_episodes']) ?? 0,
+      status: (item['status'] ?? '').toString(),
+      watchFinishDate: rawFinishDate == null || rawFinishDate.isEmpty
+          ? null
+          : rawFinishDate,
+    );
+  }
+
+  Map<String, dynamic> toPatch() {
+    return {
+      'id': id,
+      'watched_episodes': watchedEpisodes,
+      'status': status,
+      'watch_finish_date': watchFinishDate,
+    };
+  }
+}
+
+int? _asInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString());
+}
+
+String _titleOf(Map<String, dynamic> item) {
+  return (item['title'] ?? item['name'] ?? item['series_name'] ?? '')
+      .toString();
+}
+
+void _showUndoSnackBar({
+  required BuildContext context,
+  required String message,
+  required _SwipeUndoSnapshot snapshot,
+  required Future<void> Function() onRefresh,
+}) {
+  if (!context.mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text(message),
+      duration: const Duration(seconds: 4),
+      behavior: SnackBarBehavior.floating,
+      action: SnackBarAction(
+        label: '撤回',
+        onPressed: () {
+          _restoreSwipeAction(
+            context: context,
+            snapshot: snapshot,
+            onRefresh: onRefresh,
+          );
+        },
+      ),
+    ),
+  );
+}
+
+Future<void> _restoreSwipeAction({
+  required BuildContext context,
+  required _SwipeUndoSnapshot snapshot,
+  required Future<void> Function() onRefresh,
+}) async {
+  await DatabaseHelper().updateAnime(snapshot.toPatch());
+  await onRefresh();
+
+  if (!context.mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+  messenger.hideCurrentSnackBar();
+  messenger.showSnackBar(
+    SnackBar(
+      content: Text('已撤回「${snapshot.title}」的滑动操作'),
+      duration: const Duration(milliseconds: 1200),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+}
+
 /// 番剧"+1 集"业务逻辑
 ///
 /// 行为：
@@ -142,15 +240,19 @@ Future<bool> incrementEpisode(
 }) async {
   if (item['type'] == 'series') return false;
   final int id = item['id'] as int;
-  final int total = (item['total_episodes'] as int?) ?? 0;
-  final int currentWatched = (item['watched_episodes'] as int?) ?? 0;
-  final String currentStatus = (item['status'] ?? '').toString();
+  final latest = await DatabaseHelper().getAnimeById(id);
+  final source = latest ?? item;
+  final undoSnapshot = _SwipeUndoSnapshot.from(source);
+  final int total = _asInt(source['total_episodes']) ?? 0;
+  final int currentWatched = _asInt(source['watched_episodes']) ?? 0;
+  final String currentStatus = (source['status'] ?? '').toString();
+  final title = _titleOf(source);
 
   if (currentStatus == '看完' || currentStatus == '弃坑') {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('「${item['title']}」已经$currentStatus了'),
+          content: Text('「$title」已经$currentStatus了'),
           duration: const Duration(seconds: 1),
         ),
       );
@@ -159,16 +261,18 @@ Future<bool> incrementEpisode(
   }
 
   // 计算新进度
-  final int newWatched =
-      total > 0 ? (currentWatched + 1).clamp(0, total) : currentWatched + 1;
+  final int newWatched = total > 0
+      ? (currentWatched + 1).clamp(0, total)
+      : currentWatched + 1;
 
   // 自动归纳完成态
   final bool autoTransition =
       SettingsManager().autoStatusTransitionNotifier.value;
-  final String finishStatus =
-      SettingsManager().completionStatusNotifier.value;
+  final String finishStatus = SettingsManager().completionStatusNotifier.value;
   final bool reachedEnd = total > 0 && newWatched >= total;
-  final String newStatus = (autoTransition && reachedEnd) ? finishStatus : currentStatus;
+  final String newStatus = (autoTransition && reachedEnd)
+      ? finishStatus
+      : currentStatus;
 
   final Map<String, dynamic> patch = {
     'id': id,
@@ -183,16 +287,13 @@ Future<bool> incrementEpisode(
   await onRefresh();
 
   if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          reachedEnd && autoTransition
-              ? '「${item['title']}」追完啦 🎉'
-              : '「${item['title']}」 +1 集（${newWatched}${total > 0 ? '/$total' : ''}）',
-        ),
-        duration: const Duration(milliseconds: 1500),
-        behavior: SnackBarBehavior.floating,
-      ),
+    _showUndoSnackBar(
+      context: context,
+      message: reachedEnd && autoTransition
+          ? '「$title」追完啦'
+          : '「$title」 +1 集（$newWatched${total > 0 ? '/$total' : ''}）',
+      snapshot: undoSnapshot,
+      onRefresh: onRefresh,
     );
   }
   return true;
@@ -209,30 +310,31 @@ Future<bool> cycleStatus(
 }) async {
   if (item['type'] == 'series') return false;
   final int id = item['id'] as int;
-  final String currentStatus = (item['status'] ?? '').toString();
+  final latest = await DatabaseHelper().getAnimeById(id);
+  final source = latest ?? item;
+  final undoSnapshot = _SwipeUndoSnapshot.from(source);
+  final String currentStatus = (source['status'] ?? '').toString();
+  final title = _titleOf(source);
 
   final statuses = await DatabaseHelper().getAllStatuses();
   if (statuses.isEmpty) return false;
 
-  final names =
-      statuses.map((s) => (s['name'] as String?) ?? '').toList(growable: false);
+  final names = statuses
+      .map((s) => (s['name'] as String?) ?? '')
+      .toList(growable: false);
   int idx = names.indexOf(currentStatus);
   if (idx < 0) idx = -1;
   final String next = names[(idx + 1) % names.length];
 
-  await DatabaseHelper().updateAnime({
-    'id': id,
-    'status': next,
-  });
+  await DatabaseHelper().updateAnime({'id': id, 'status': next});
   await onRefresh();
 
   if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('「${item['title']}」状态：$currentStatus → $next'),
-        duration: const Duration(milliseconds: 1500),
-        behavior: SnackBarBehavior.floating,
-      ),
+    _showUndoSnackBar(
+      context: context,
+      message: '「$title」状态：$currentStatus → $next',
+      snapshot: undoSnapshot,
+      onRefresh: onRefresh,
     );
   }
   return true;

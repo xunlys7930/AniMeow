@@ -44,7 +44,9 @@ class SiblingsModule extends StatelessWidget {
                 child: Row(
                   children: [
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(
+                        props.coverBorderRadius,
+                      ),
                       child: SizedBox(
                         width: 56,
                         height: 80,

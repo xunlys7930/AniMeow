@@ -51,10 +51,7 @@ class ReminderModule extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     props.reminderTime ?? '',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
                   ),
                 ],
               ),
