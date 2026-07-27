@@ -84,7 +84,7 @@ enum DetailLayout {
 /// `header` 不在此枚举中——封面 + 标题 + 状态/评分 永远在页面顶部，
 /// 由 layout 自身渲染，不允许用户隐藏。
 enum DetailModule {
-  /// 状态徽章 + 已观看/总集数 + 进度条
+  /// 状态徽章 + 已观看/总集数或章节 + 进度条
   statusProgress,
 
   /// 标签 chip 列表
@@ -93,19 +93,22 @@ enum DetailModule {
   /// 评价 / 备注
   review,
 
-  /// 放送日期、制作公司、开始/结束观看时间
+  /// 放送/出版日期、制作/发行、开始/结束观看或阅读时间
   detailMeta,
 
   /// 提醒星期 + 时间
   reminder,
 
   /// 同系列其他作品横滑列表
-  siblings;
+  siblings,
+
+  /// 关联角色列表
+  characters;
 
   String get label {
     switch (this) {
       case DetailModule.statusProgress:
-        return '观看进度';
+        return '进度与状态';
       case DetailModule.tags:
         return '标签';
       case DetailModule.review:
@@ -116,23 +119,27 @@ enum DetailModule {
         return '追番提醒';
       case DetailModule.siblings:
         return '同系列作品';
+      case DetailModule.characters:
+        return '角色';
     }
   }
 
   String get description {
     switch (this) {
       case DetailModule.statusProgress:
-        return '状态徽章 + 集数进度';
+        return '状态徽章 + 集数/章节进度';
       case DetailModule.tags:
         return '所有已打标签';
       case DetailModule.review:
         return '你的评价 / 笔记';
       case DetailModule.detailMeta:
-        return '放送日期、制作、观看时间';
+        return '放送/出版、制作/发行、观看/阅读时间';
       case DetailModule.reminder:
         return '追番提醒星期与时间';
       case DetailModule.siblings:
         return '同一系列下的其他作品';
+      case DetailModule.characters:
+        return '录入并管理作品角色';
     }
   }
 
@@ -150,6 +157,8 @@ enum DetailModule {
         return Icons.notifications_active_outlined;
       case DetailModule.siblings:
         return Icons.auto_awesome_motion_outlined;
+      case DetailModule.characters:
+        return Icons.groups_2_outlined;
     }
   }
 
@@ -167,6 +176,8 @@ enum DetailModule {
         return 'reminder';
       case DetailModule.siblings:
         return 'siblings';
+      case DetailModule.characters:
+        return 'characters';
     }
   }
 
@@ -179,13 +190,14 @@ enum DetailModule {
 
   /// 默认顺序（用户首次进入或重置时）
   static List<DetailModule> get defaultOrder => const [
-        DetailModule.statusProgress,
-        DetailModule.tags,
-        DetailModule.review,
-        DetailModule.detailMeta,
-        DetailModule.reminder,
-        DetailModule.siblings,
-      ];
+    DetailModule.statusProgress,
+    DetailModule.tags,
+    DetailModule.review,
+    DetailModule.detailMeta,
+    DetailModule.reminder,
+    DetailModule.siblings,
+    DetailModule.characters,
+  ];
 
   /// 反序列化 setStringList 存储；缺失的模块追加到末尾，未知项忽略
   static List<DetailModule> deserializeOrder(List<String>? raw) {

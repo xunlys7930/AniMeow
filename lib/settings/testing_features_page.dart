@@ -1,6 +1,10 @@
-﻿import 'package:flutter/material.dart';
-import 'error_log_page.dart';
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'anime_style_analysis_page.dart';
+import 'diagnostic_log_page.dart';
 import 'server_discovery_page.dart';
+import '../settings_manager.dart';
 
 class TestingFeaturesPage extends StatelessWidget {
   const TestingFeaturesPage({super.key});
@@ -12,16 +16,19 @@ class TestingFeaturesPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
+          _buildOperationLogSetting(context),
           _buildFeatureCard(
             context: context,
             icon: Icons.error_outline,
             color: Colors.redAccent,
-            title: "错误日志",
-            subtitle: "查看并复制应用运行中的报错记录",
+            title: "诊断日志",
+            subtitle: "查看并复制操作轨迹与错误记录",
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const ErrorLogPage()),
+                MaterialPageRoute(
+                  builder: (context) => const DiagnosticLogPage(),
+                ),
               );
             },
           ),
@@ -40,10 +47,103 @@ class TestingFeaturesPage extends StatelessWidget {
               );
             },
           ),
+          _buildFeatureCard(
+            context: context,
+            icon: Icons.auto_awesome,
+            color: Colors.pinkAccent,
+            title: "AI 看番风格分析",
+            subtitle: "注册用户每天一次，让云端分析你的看番习惯",
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AnimeStyleAnalysisPage(),
+                ),
+              );
+            },
+          ),
           // 未来可以在这里添加更多测试功能
         ],
       ),
     );
+  }
+
+  Widget _buildOperationLogSetting(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: SettingsManager().operationLogEnabledNotifier,
+      builder: (context, enabled, _) {
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: Theme.of(
+                context,
+              ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+          child: SwitchListTile(
+            value: enabled,
+            onChanged: (value) {
+              unawaited(_setOperationLogEnabled(context, value));
+            },
+            secondary: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.deepPurple.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.bug_report_outlined,
+                color: Colors.deepPurple,
+                size: 24,
+              ),
+            ),
+            title: const Text(
+              '操作日志',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              enabled ? '已开启：记录最近操作，仅保存在本机' : '默认关闭，遇到问题时临时开启即可',
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _setOperationLogEnabled(BuildContext context, bool value) async {
+    if (value) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('开启操作日志？'),
+          content: const Text(
+            '开启后会在本机记录最近的页面和关键操作，用于定位问题。日志不会自动上传，\n'
+            '可随时在诊断日志页面复制或清空。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('开启'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+    }
+
+    await SettingsManager().setOperationLogEnabled(value);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(value ? '操作日志已开启' : '操作日志已关闭')));
   }
 
   Widget _buildFeatureCard({
@@ -60,7 +160,9 @@ class TestingFeaturesPage extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: Theme.of(
+            context,
+          ).colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       child: InkWell(

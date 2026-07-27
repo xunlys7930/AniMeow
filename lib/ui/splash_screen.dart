@@ -17,11 +17,7 @@ class SplashScreen extends StatefulWidget {
   /// 可选：覆盖设置中的展示时长（一般用不到，主要给测试用）
   final Duration? duration;
 
-  const SplashScreen({
-    super.key,
-    required this.next,
-    this.duration,
-  });
+  const SplashScreen({super.key, required this.next, this.duration});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -78,7 +74,8 @@ class _SplashScreenState extends State<SplashScreen>
       });
       _controller.forward();
 
-      final ms = widget.duration?.inMilliseconds ??
+      final ms =
+          widget.duration?.inMilliseconds ??
           SettingsManager().splashDurationNotifier.value;
       Future.delayed(Duration(milliseconds: ms), () {
         if (mounted) {
@@ -93,9 +90,9 @@ class _SplashScreenState extends State<SplashScreen>
     _navigated = true;
 
     if (instant) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => widget.next),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => widget.next));
       return;
     }
 
@@ -104,10 +101,7 @@ class _SplashScreenState extends State<SplashScreen>
         transitionDuration: const Duration(milliseconds: 400),
         pageBuilder: (_, __, ___) => widget.next,
         transitionsBuilder: (_, anim, __, child) {
-          return FadeTransition(
-            opacity: anim,
-            child: child,
-          );
+          return FadeTransition(opacity: anim, child: child);
         },
       ),
     );

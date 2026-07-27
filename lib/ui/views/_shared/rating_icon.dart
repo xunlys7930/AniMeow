@@ -59,9 +59,6 @@ class RatingIconWidget extends StatelessWidget {
     if (icon == RatingIcon.none || icon.emoji.isEmpty) {
       return const SizedBox.shrink();
     }
-    return Text(
-      icon.emoji,
-      style: TextStyle(fontSize: size, height: 1.0),
-    );
+    return Text(icon.emoji, style: TextStyle(fontSize: size, height: 1.0));
   }
 }

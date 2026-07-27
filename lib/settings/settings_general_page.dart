@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../settings_manager.dart';
 import '../db/database_helper.dart';
 
@@ -79,6 +79,33 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage> {
             ),
           ]),
           const SizedBox(height: 24),
+          _buildSectionTitle("网络与数据源"),
+          _buildSettingsCard([
+            _buildBangumiApiModeTile(),
+            _buildDivider(),
+            _buildDisplayItemToggle(
+              "使用 Bangumi 封面代理",
+              SettingsManager().useBangumiImageProxyNotifier,
+              'bangumi_image_proxy',
+              subtitle: "将 Bangumi 封面切换到可访问的图片代理",
+              onToggle: SettingsManager().setUseBangumiImageProxy,
+            ),
+            _buildDivider(),
+            _buildEndpointTile(
+              title: "Bangumi API 代理地址",
+              notifier: SettingsManager().bangumiApiProxyBaseNotifier,
+              fallback: BangumiSettingsDefaults.apiProxyBase,
+              onSave: SettingsManager().setBangumiApiProxyBase,
+            ),
+            _buildDivider(),
+            _buildEndpointTile(
+              title: "Bangumi 封面代理地址",
+              notifier: SettingsManager().bangumiImageProxyBaseNotifier,
+              fallback: BangumiSettingsDefaults.imageProxyBase,
+              onSave: SettingsManager().setBangumiImageProxyBase,
+            ),
+          ]),
+          const SizedBox(height: 24),
           _buildSectionTitle("启动设置"),
           _buildSettingsCard([_buildStatusPickerTile()]),
           const SizedBox(height: 24),
@@ -103,10 +130,10 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage> {
             ),
             _buildDivider(),
             _buildDisplayItemToggle(
-              "显示资源库入口",
+              "显示资料库入口",
               SettingsManager().showServerSearchNotifier,
               'server_search',
-              subtitle: "从服务器资源库搜索并添加番剧",
+              subtitle: "从服务器资料库搜索并添加番剧",
             ),
           ]),
           const SizedBox(height: 24),
@@ -116,7 +143,7 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage> {
               "显示云端资源发现",
               SettingsManager().showServerDiscoveryNotifier,
               'server_discovery',
-              subtitle: "在「发现」/「资源库」顶部显示进阶云端搜索入口",
+              subtitle: "在「发现」/「资料库」顶部显示进阶云端搜索入口",
             ),
           ]),
         ],
@@ -234,6 +261,206 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildBangumiApiModeTile() {
+    return ValueListenableBuilder<BangumiApiMode>(
+      valueListenable: SettingsManager().bangumiApiModeNotifier,
+      builder: (context, mode, _) {
+        return InkWell(
+          onTap: () => _showBangumiApiModeDialog(mode),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.pinkAccent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.hub_outlined,
+                    color: Colors.pinkAccent,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Bangumi 数据源",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        "${mode.label} · ${mode.description}",
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: Colors.grey[400],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showBangumiApiModeDialog(BangumiApiMode current) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('选择 Bangumi 数据源'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: BangumiApiMode.values.map((mode) {
+              return RadioListTile<BangumiApiMode>(
+                title: Text(mode.label),
+                subtitle: Text(mode.description),
+                value: mode,
+                groupValue: current,
+                onChanged: (value) {
+                  if (value == null) return;
+                  SettingsManager().setBangumiApiMode(value);
+                  Navigator.pop(ctx);
+                  setState(() {});
+                },
+              );
+            }).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEndpointTile({
+    required String title,
+    required ValueNotifier<String> notifier,
+    required String fallback,
+    required Future<void> Function(String value) onSave,
+  }) {
+    return ValueListenableBuilder<String>(
+      valueListenable: notifier,
+      builder: (context, value, _) {
+        final displayValue = value.isEmpty ? fallback : value;
+        return InkWell(
+          onTap: () => _showEndpointDialog(
+            title: title,
+            initialValue: displayValue,
+            fallback: fallback,
+            onSave: onSave,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.lightBlue.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.link_rounded,
+                    color: Colors.lightBlue,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        displayValue,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: Colors.grey[400],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEndpointDialog({
+    required String title,
+    required String initialValue,
+    required String fallback,
+    required Future<void> Function(String value) onSave,
+  }) {
+    final controller = TextEditingController(text: initialValue);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.url,
+          decoration: InputDecoration(
+            hintText: fallback,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              controller.text = fallback;
+            },
+            child: const Text('恢复默认'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await onSave(controller.text);
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              setState(() {});
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -463,6 +690,8 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage> {
         return Icons.cloud_download_outlined;
       case 'server_discovery':
         return Icons.cloud_outlined;
+      case 'bangumi_image_proxy':
+        return Icons.image_outlined;
       default:
         return Icons.settings_outlined;
     }
@@ -493,6 +722,8 @@ class _SettingsGeneralPageState extends State<SettingsGeneralPage> {
         return Colors.lightBlue;
       case 'server_discovery':
         return Colors.cyan;
+      case 'bangumi_image_proxy':
+        return Colors.pinkAccent;
       default:
         return Colors.grey;
     }

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:path/path.dart' as path;
+import '../../utils/bangumi_image_proxy.dart';
 
 class AnimeCoverImage extends StatelessWidget {
   final String? url;
@@ -21,21 +22,31 @@ class AnimeCoverImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (url == null || url!.isEmpty) {
+    final imageWidth = width;
+    final imageHeight = height;
+    final documentDir = appDocDir;
+    final imageUrl = proxyBangumiImageUrl(url);
+    final pixelRatio = MediaQuery.of(context).devicePixelRatio;
+
+    if (imageUrl == null || imageUrl.isEmpty) {
       return Container(
-        width: width,
-        height: height,
+        width: imageWidth,
+        height: imageHeight,
         color: Colors.grey[200],
         child: const Icon(Icons.movie_outlined, color: Colors.grey),
       );
     }
 
-    if (url!.startsWith('http')) {
+    if (imageUrl.startsWith('http')) {
+      final cacheWidth = imageWidth != null
+          ? (imageWidth * pixelRatio).toInt()
+          : (300 * pixelRatio).toInt();
+
       return CachedNetworkImage(
-        imageUrl: url!,
-        width: width,
-        height: height,
-        memCacheWidth: 300,
+        imageUrl: imageUrl,
+        width: imageWidth,
+        height: imageHeight,
+        memCacheWidth: cacheWidth,
         fit: fit,
         placeholder: (context, url) => Container(
           color: Colors.grey[200],
@@ -57,13 +68,13 @@ class AnimeCoverImage extends StatelessWidget {
 
     // 本地图片
     File imageFile;
-    if (path.isAbsolute(url!)) {
-      imageFile = File(url!);
+    if (path.isAbsolute(imageUrl)) {
+      imageFile = File(imageUrl);
     } else {
-      if (appDocDir == null) {
+      if (documentDir == null) {
         return Container(
-          width: width,
-          height: height,
+          width: imageWidth,
+          height: imageHeight,
           color: Colors.grey[200],
           child: const Center(
             child: SizedBox(
@@ -74,14 +85,18 @@ class AnimeCoverImage extends StatelessWidget {
           ),
         );
       }
-      imageFile = File(path.join(appDocDir!.path, url!));
+      imageFile = File(path.join(documentDir.path, imageUrl));
     }
+
+    final cacheWidth = imageWidth != null
+        ? (imageWidth * pixelRatio).toInt()
+        : (300 * pixelRatio).toInt();
 
     return Image.file(
       imageFile,
-      width: width,
-      height: height,
-      cacheWidth: 300,
+      width: imageWidth,
+      height: imageHeight,
+      cacheWidth: cacheWidth,
       fit: fit,
       errorBuilder: (context, error, stackTrace) => Container(
         color: Colors.grey[200],

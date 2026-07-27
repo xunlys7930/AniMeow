@@ -19,14 +19,17 @@ class StatusProgressModule extends StatelessWidget {
     return ModuleSection(
       icon: Icons.timeline_rounded,
       iconColor: color,
-      title: '观看进度',
+      title: props.subjectProfile.progressTitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
@@ -61,7 +64,7 @@ class StatusProgressModule extends StatelessWidget {
                 )
               else
                 Text(
-                  '$watched 集',
+                  '$watched ${props.subjectProfile.progressUnit}',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -83,7 +86,7 @@ class StatusProgressModule extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '${(percent * 100).round()}% 完成',
+              '${(percent * 100).round()}% ${props.subjectProfile.progressCompletionLabel}',
               style: TextStyle(
                 fontSize: 11,
                 color: colorScheme.onSurfaceVariant,

@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'design_tokens.dart';
 
@@ -8,7 +9,10 @@ import 'design_tokens.dart';
 /// - Shape（统一圆角 token）
 /// - Typography（粗大化标题字号）
 /// - AppBar / Card / FAB / NavBar / Chip / Dialog / Bottom Sheet 风格
-ThemeData buildAppTheme(Color seedColor, {Brightness brightness = Brightness.light}) {
+ThemeData buildAppTheme(
+  Color seedColor, {
+  Brightness brightness = Brightness.light,
+}) {
   final base = ColorScheme.fromSeed(
     seedColor: seedColor,
     brightness: brightness,
@@ -29,8 +33,9 @@ ThemeData buildAppTheme(Color seedColor, {Brightness brightness = Brightness.lig
     seedColor.withValues(alpha: 0.20),
     brightness == Brightness.light ? Colors.white : Colors.black,
   );
-  final Color onPrimaryContainer =
-      brightness == Brightness.light ? Colors.black87 : Colors.white;
+  final Color onPrimaryContainer = brightness == Brightness.light
+      ? Colors.black87
+      : Colors.white;
 
   final colorScheme = base.copyWith(
     primary: seedColor,
@@ -39,16 +44,26 @@ ThemeData buildAppTheme(Color seedColor, {Brightness brightness = Brightness.lig
     onPrimaryContainer: onPrimaryContainer,
   );
 
-  final isLight = brightness == Brightness.light;
-
   return ThemeData(
     useMaterial3: true,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: isLight
-        ? colorScheme.surface
-        : colorScheme.surface,
+    scaffoldBackgroundColor: colorScheme.surfaceContainerLowest,
+    canvasColor: colorScheme.surfaceContainerLowest,
     splashFactory: InkRipple.splashFactory,
     visualDensity: VisualDensity.adaptivePlatformDensity,
+    materialTapTargetSize: MaterialTapTargetSize.padded,
+    focusColor: colorScheme.primary.withValues(alpha: 0.12),
+    hoverColor: colorScheme.primary.withValues(alpha: 0.06),
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.fuchsia: FadeForwardsPageTransitionsBuilder(),
+      },
+    ),
 
     // ============ Typography（M3 Expressive 倾向：大标题、粗字重） ============
     textTheme: const TextTheme(
@@ -71,23 +86,11 @@ ThemeData buildAppTheme(Color seedColor, {Brightness brightness = Brightness.lig
         fontWeight: FontWeight.w800,
         letterSpacing: -0.2,
       ),
-      headlineMedium: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-      ),
+      headlineMedium: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
       // 标题
-      titleLarge: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-      ),
-      titleMedium: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-      ),
-      titleSmall: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-      ),
+      titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+      titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
       // 正文
       bodyLarge: TextStyle(fontSize: 15, height: 1.4),
       bodyMedium: TextStyle(fontSize: 13, height: 1.4),
@@ -139,7 +142,7 @@ ThemeData buildAppTheme(Color seedColor, {Brightness brightness = Brightness.lig
 
     // ============ Bottom Navigation：M3 NavigationBar ============
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: colorScheme.surfaceContainer,
+      backgroundColor: colorScheme.surfaceContainerHigh,
       surfaceTintColor: Colors.transparent,
       indicatorColor: colorScheme.secondaryContainer,
       indicatorShape: RoundedRectangleBorder(
@@ -161,8 +164,36 @@ ThemeData buildAppTheme(Color seedColor, {Brightness brightness = Brightness.lig
               : colorScheme.onSurfaceVariant,
         );
       }),
-      height: 72,
+      height: AppSize.compactNavigationHeight,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+    ),
+
+    // ============ Navigation Rail：平板 / 桌面 ============
+    navigationRailTheme: NavigationRailThemeData(
+      backgroundColor: colorScheme.surfaceContainerLowest,
+      useIndicator: true,
+      indicatorColor: colorScheme.secondaryContainer,
+      indicatorShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.xs),
+      ),
+      selectedIconTheme: IconThemeData(
+        color: colorScheme.onSecondaryContainer,
+        size: 24,
+      ),
+      unselectedIconTheme: IconThemeData(
+        color: colorScheme.onSurfaceVariant,
+        size: 23,
+      ),
+      selectedLabelTextStyle: TextStyle(
+        color: colorScheme.onSurface,
+        fontSize: 12,
+        fontWeight: FontWeight.w800,
+      ),
+      unselectedLabelTextStyle: TextStyle(
+        color: colorScheme.onSurfaceVariant,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
     ),
 
     // ============ Chip：M3 风格 ============
@@ -281,6 +312,93 @@ ThemeData buildAppTheme(Color seedColor, {Brightness brightness = Brightness.lig
         borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    ),
+
+    // ============ SearchBar：统一搜索入口 ============
+    searchBarTheme: SearchBarThemeData(
+      backgroundColor: WidgetStatePropertyAll(colorScheme.surfaceContainerHigh),
+      surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+      elevation: const WidgetStatePropertyAll(0),
+      shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.full),
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+          ),
+        ),
+      ),
+      padding: const WidgetStatePropertyAll(
+        EdgeInsets.symmetric(horizontal: AppSpacing.md),
+      ),
+      constraints: const BoxConstraints(
+        minHeight: AppSize.minInteractive,
+        maxHeight: AppSize.searchBarHeight,
+      ),
+      textStyle: WidgetStatePropertyAll(
+        TextStyle(color: colorScheme.onSurface, fontSize: 14),
+      ),
+      hintStyle: WidgetStatePropertyAll(
+        TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
+      ),
+    ),
+
+    // ============ IconButton / Tooltip：明确悬停与焦点反馈 ============
+    iconButtonTheme: IconButtonThemeData(
+      style: ButtonStyle(
+        minimumSize: const WidgetStatePropertyAll(
+          Size.square(AppSize.minInteractive),
+        ),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.xs),
+          ),
+        ),
+      ),
+    ),
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(
+        color: colorScheme.inverseSurface,
+        borderRadius: BorderRadius.circular(AppRadius.xs),
+      ),
+      textStyle: TextStyle(
+        color: colorScheme.onInverseSurface,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+      waitDuration: const Duration(milliseconds: 500),
+    ),
+
+    // ============ 菜单与滚动条：桌面端可发现性 ============
+    menuTheme: MenuThemeData(
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(
+          colorScheme.surfaceContainerHigh,
+        ),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        elevation: const WidgetStatePropertyAll(3),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+        ),
+      ),
+    ),
+    popupMenuTheme: PopupMenuThemeData(
+      color: colorScheme.surfaceContainerHigh,
+      surfaceTintColor: Colors.transparent,
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+    ),
+    scrollbarTheme: ScrollbarThemeData(
+      radius: const Radius.circular(AppRadius.full),
+      thickness: const WidgetStatePropertyAll(6),
+      thumbColor: WidgetStateProperty.resolveWith((states) {
+        final alpha = states.contains(WidgetState.hovered) ? 0.55 : 0.32;
+        return colorScheme.onSurfaceVariant.withValues(alpha: alpha);
+      }),
     ),
 
     // ============ Progress Indicator ============

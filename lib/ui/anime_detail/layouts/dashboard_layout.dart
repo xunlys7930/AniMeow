@@ -39,7 +39,7 @@ class DashboardLayout extends StatelessWidget {
             child: Column(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(props.coverBorderRadius),
                   child: AspectRatio(
                     aspectRatio: 2 / 3,
                     child: Hero(
@@ -117,21 +117,17 @@ class _StatsCard extends StatelessWidget {
               ),
             ),
           ),
-        if (props.rating > 0) ...[
+        if (props.hasRating) ...[
           const SizedBox(height: 12),
           _StatRow(
             label: '评分',
-            value: '${props.rating.toStringAsFixed(1)} / 10',
+            value: props.ratingDetailLabel,
             color: cs.primary,
           ),
         ],
         if (total > 0) ...[
           const SizedBox(height: 12),
-          _StatRow(
-            label: '进度',
-            value: '$watched / $total',
-            color: cs.tertiary,
-          ),
+          _StatRow(label: '进度', value: '$watched / $total', color: cs.tertiary),
           const SizedBox(height: 6),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
@@ -147,7 +143,7 @@ class _StatsCard extends StatelessWidget {
             props.watchFinishDate.isNotEmpty) ...[
           const SizedBox(height: 12),
           _StatRow(
-            label: '观看跨度',
+            label: props.subjectProfile.spanLabel,
             value: '${_watchedDays(props) ?? '-'} 天',
             color: cs.secondary,
           ),

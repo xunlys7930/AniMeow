@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../api/bangumi_service.dart';
 import '../ui/neumorphic_style.dart';
-import '../add_anime_page.dart';
+import '../ui/pages/add_anime_page.dart';
+import 'server_discovery_season.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class ServerDiscoveryPage extends StatefulWidget {
@@ -21,7 +22,7 @@ class _ServerDiscoveryPageState extends State<ServerDiscoveryPage> {
   String? _selectedType;
 
   // 预定义的标签和年份（也可以从服务器获取，但这里先硬编码常用的）
-  List<String> _tags = [
+  final List<String> _tags = [
     "全部",
     "原创",
     "漫画改",
@@ -33,16 +34,9 @@ class _ServerDiscoveryPageState extends State<ServerDiscoveryPage> {
     "校园",
     "日常",
   ];
-  final List<String> _years = [
+  late final List<String> _years = [
     "全部",
-    "2025",
-    "2024",
-    "2023",
-    "2022",
-    "2021",
-    "2020",
-    "2019",
-    "2018",
+    for (var year = DateTime.now().year; year >= 2018; year--) "$year",
   ];
   final List<String> _months = ["全部", "1", "4", "7", "10"];
   final List<String> _types = ["全部", "TV", "OVA", "剧场版", "Web", "SP"];
@@ -55,22 +49,24 @@ class _ServerDiscoveryPageState extends State<ServerDiscoveryPage> {
 
   Future<void> _fetchData() async {
     setState(() => _isLoading = true);
-    final results = await BangumiService.getServerAnimes(
-      keyword: _searchController.text,
-      tag: _selectedTag == "全部"
-          ? null
-          : (() {
-              // 如果选中了类型，则合并标签和类型进行查询
-              if (_selectedType != null &&
-                  _selectedType != "全部" &&
-                  _selectedTag != null &&
-                  _selectedTag != "全部") {
-                return "${_selectedTag},${_selectedType}";
-              }
-              return _selectedTag;
-            })(),
-      year: _selectedYear == "全部" ? null : _selectedYear,
-      month: _selectedMonth == "全部" ? null : _selectedMonth,
+    final selectedYear = _selectedYear == "全部" ? null : _selectedYear;
+    final selectedSeasonMonth = _selectedMonth == "全部"
+        ? null
+        : int.tryParse(_selectedMonth ?? '');
+    final queryYears = _queryYearsForSeason(selectedYear, selectedSeasonMonth);
+    final resultGroups = await Future.wait(
+      queryYears.map(
+        (year) => BangumiService.getServerAnimes(
+          keyword: _searchController.text,
+          tag: _selectedServerTagQuery(),
+          year: year,
+        ),
+      ),
+    );
+    final results = _filterResultsBySeason(
+      _deduplicateResults(resultGroups.expand((group) => group)),
+      selectedSeasonMonth: selectedSeasonMonth,
+      selectedYear: selectedYear,
     );
     if (mounted) {
       setState(() {
@@ -78,6 +74,60 @@ class _ServerDiscoveryPageState extends State<ServerDiscoveryPage> {
         _isLoading = false;
       });
     }
+  }
+
+  String? _selectedServerTagQuery() {
+    if (_selectedTag == "全部") return null;
+    // 如果选中了类型，则合并标签和类型进行查询
+    if (_selectedType != null &&
+        _selectedType != "全部" &&
+        _selectedTag != null &&
+        _selectedTag != "全部") {
+      return "$_selectedTag,$_selectedType";
+    }
+    return _selectedTag;
+  }
+
+  List<String?> _queryYearsForSeason(String? selectedYear, int? seasonMonth) {
+    if (selectedYear == null || selectedYear.isEmpty) return [null];
+    if (seasonMonth != 1) return [selectedYear];
+
+    final parsedYear = int.tryParse(selectedYear);
+    if (parsedYear == null) return [selectedYear];
+    return [selectedYear, '${parsedYear - 1}'];
+  }
+
+  List<BangumiSearchResult> _deduplicateResults(
+    Iterable<BangumiSearchResult> results,
+  ) {
+    final seen = <String>{};
+    final deduplicated = <BangumiSearchResult>[];
+
+    for (final result in results) {
+      final key = '${result.source}:${result.id}:${result.nameCn}';
+      if (seen.add(key)) deduplicated.add(result);
+    }
+
+    return deduplicated;
+  }
+
+  List<BangumiSearchResult> _filterResultsBySeason(
+    List<BangumiSearchResult> results, {
+    required int? selectedSeasonMonth,
+    required String? selectedYear,
+  }) {
+    if (selectedSeasonMonth == null) return results;
+
+    final seasonYear = selectedYear == null ? null : int.tryParse(selectedYear);
+    return results
+        .where(
+          (anime) => isAirDateInServerDiscoverySeason(
+            anime.airDate,
+            seasonMonth: selectedSeasonMonth,
+            seasonYear: seasonYear,
+          ),
+        )
+        .toList();
   }
 
   @override
@@ -229,7 +279,9 @@ class _ServerDiscoveryPageState extends State<ServerDiscoveryPage> {
                         borderRadius: 20,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         isPressed: isSelected,
-                        color: isSelected ? themeColor.withValues(alpha: 0.1) : null,
+                        color: isSelected
+                            ? themeColor.withValues(alpha: 0.1)
+                            : null,
                         child: Center(
                           child: Text(
                             item,

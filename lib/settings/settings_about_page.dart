@@ -1,11 +1,12 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import '../changelog_page.dart';
-import '../disclaimer_page.dart';
+import '../ui/pages/changelog_page.dart';
+import '../ui/pages/disclaimer_page.dart';
 import '../api/update_service.dart';
-import '../credits_page.dart';
+import '../ui/pages/credits_page.dart';
+import '../ui/components/app_brand_icon.dart';
 
 class SettingsAboutPage extends StatefulWidget {
   const SettingsAboutPage({super.key});
@@ -83,7 +84,7 @@ class _SettingsAboutPageState extends State<SettingsAboutPage> {
               icon: Icons.tv,
               color: Colors.pinkAccent,
               title: "关注 Bilibili",
-              subtitle: "@巡xUx",
+              subtitle: "项目动态与开发记录",
               onTap: () => _openBilibili(context),
             ),
             _buildDivider(),
@@ -113,7 +114,7 @@ class _SettingsAboutPageState extends State<SettingsAboutPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "Made with ❤️ by 巡xUx",
+                  "Made with ❤️ for every anime fan",
                   style: TextStyle(color: Colors.grey[400], fontSize: 12),
                 ),
               ],
@@ -151,11 +152,7 @@ class _SettingsAboutPageState extends State<SettingsAboutPage> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(20),
-              child: Image.asset(
-                'assets/icon.png',
-                errorBuilder: (context, error, stackTrace) =>
-                    Icon(Icons.pets, size: 40, color: themeColor),
-              ),
+              child: const AppBrandIcon(),
             ),
           ),
           const SizedBox(height: 16),

@@ -36,7 +36,7 @@ android {
         applicationId = "com.example.anime_tracker"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = 10
+        versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
@@ -73,5 +73,6 @@ flutter {
 }
 
 dependencies {
+    implementation("androidx.core:core-ktx:1.13.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

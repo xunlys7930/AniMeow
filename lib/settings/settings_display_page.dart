@@ -21,6 +21,10 @@ class SettingsDisplayPage extends StatefulWidget {
 class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
   // 本地设置值
   double _fontScale = 1.0;
+  double _coverBorderRadius = SettingsManager.defaultCoverBorderRadius;
+  double _badgeScale = SettingsManager.defaultBadgeScale;
+  double _badgeOpacity = SettingsManager.defaultBadgeOpacity;
+  double _badgeRadius = SettingsManager.defaultBadgeRadius;
   int _gridColumns = 3;
   String _titlePosition = 'on_cover';
 
@@ -28,6 +32,10 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
   void initState() {
     super.initState();
     _fontScale = SettingsManager().fontScaleNotifier.value;
+    _coverBorderRadius = SettingsManager().coverBorderRadiusNotifier.value;
+    _badgeScale = SettingsManager().badgeScaleNotifier.value;
+    _badgeOpacity = SettingsManager().badgeOpacityNotifier.value;
+    _badgeRadius = SettingsManager().badgeRadiusNotifier.value;
     _gridColumns = SettingsManager().gridColumnsNotifier.value;
     _titlePosition = SettingsManager().titlePositionNotifier.value;
   }
@@ -38,6 +46,22 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
         _fontScale = value;
         SettingsManager().setFontScale(value);
       }
+      if (key == 'cover_border_radius') {
+        _coverBorderRadius = value;
+        SettingsManager().setCoverBorderRadius(value);
+      }
+      if (key == 'badge_scale') {
+        _badgeScale = value;
+        SettingsManager().setBadgeScale(value);
+      }
+      if (key == 'badge_opacity') {
+        _badgeOpacity = value;
+        SettingsManager().setBadgeOpacity(value);
+      }
+      if (key == 'badge_radius') {
+        _badgeRadius = value;
+        SettingsManager().setBadgeRadius(value);
+      }
       if (key == 'grid_columns') {
         _gridColumns = value;
         SettingsManager().setGridColumns(value);
@@ -47,6 +71,21 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
         SettingsManager().setTitlePosition(value);
       }
     });
+  }
+
+  Future<void> _resetHomeDisplaySettings() async {
+    await SettingsManager().resetHomeDisplaySettings();
+    if (!mounted) return;
+    setState(() {
+      _badgeScale = SettingsManager.defaultBadgeScale;
+      _badgeOpacity = SettingsManager.defaultBadgeOpacity;
+      _badgeRadius = SettingsManager.defaultBadgeRadius;
+      _gridColumns = 3;
+      _titlePosition = 'on_cover';
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('已恢复首页推荐设置')));
   }
 
   @override
@@ -63,126 +102,246 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
       body: ValueListenableBuilder<HomeLayout>(
         valueListenable: SettingsManager().homeLayoutNotifier,
         builder: (context, layout, _) {
-          final showWallSettings = layout == HomeLayout.posterWall;
-          return ListView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.sm,
-            ),
-            children: [
-              _buildSectionTitle('首页样式'),
-              _buildSettingsCard([
-                _buildLayoutTile(layout),
-                _buildDivider(),
-                _buildBadgeStyleTile(),
-                _buildDivider(),
-                _buildRatingIconTile(),
-              ]),
-              const SizedBox(height: AppSpacing.xl),
-
-              _buildSectionTitle('详情页定制'),
-              _buildSettingsCard([
-                _buildDetailLayoutTile(),
-                _buildDivider(),
-                _buildModuleManagementTile(),
-              ]),
-              const SizedBox(height: AppSpacing.xl),
-
-              _buildSectionTitle('界面展示'),
-              _buildSettingsCard([
-                _buildSliderItem(
-                  icon: Icons.text_fields_outlined,
-                  color: Colors.teal,
-                  title: '字体大小',
-                  value: '${(_fontScale * 100).round()}%',
-                  slider: Slider(
-                    value: _fontScale,
-                    min: 0.8,
-                    max: 1.4,
-                    divisions: 6,
-                    onChanged: (val) => _updateSetting('font_scale', val),
-                  ),
+          final showGridSettings = layout.supportsGridColumns;
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 960),
+              child: ListView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
                 ),
-                if (showWallSettings) ...[
-                  _buildDivider(),
-                  _buildSliderItem(
-                    icon: Icons.grid_on_outlined,
-                    color: Colors.orange,
-                    title: '海报墙列数',
-                    value: '$_gridColumns 列',
-                    slider: Slider(
-                      value: _gridColumns.toDouble(),
-                      min: 2,
-                      max: 5,
-                      divisions: 3,
-                      onChanged: (val) =>
-                          _updateSetting('grid_columns', val.toInt()),
+                children: [
+                  _buildSectionTitle('首页样式'),
+                  _buildSettingsCard([
+                    _buildLayoutTile(layout),
+                    _buildDivider(),
+                    _buildBadgeStyleTile(),
+                    _buildDivider(),
+                    _buildRatingIconTile(),
+                  ]),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  _buildSectionTitle('封面信息层'),
+                  _buildSettingsCard([
+                    _buildDisplayItemToggle(
+                      '封面显示状态',
+                      SettingsManager().showCoverStatusNotifier,
+                      'cover_status',
+                      subtitle: '状态文字或状态点',
                     ),
-                  ),
-                  _buildDivider(),
-                  _buildMenuTile(
-                    icon: Icons.subtitles_outlined,
-                    color: Colors.blueGrey,
-                    title: '封面标题位置',
-                    trailing: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _titlePosition,
-                        onChanged: (String? newValue) {
-                          if (newValue != null) {
-                            _updateSetting('title_position', newValue);
-                          }
-                        },
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'on_cover',
-                            child: Text('封面底部',
-                                style: TextStyle(fontSize: 14)),
-                          ),
-                          DropdownMenuItem(
-                            value: 'below_cover',
-                            child: Text('封面外下方',
-                                style: TextStyle(fontSize: 14)),
-                          ),
-                        ],
+                    _buildDivider(),
+                    _buildDisplayItemToggle(
+                      '封面显示评分',
+                      SettingsManager().showCoverRatingNotifier,
+                      'cover_rating',
+                    ),
+                    _buildDivider(),
+                    _buildDisplayItemToggle(
+                      '封面显示进度',
+                      SettingsManager().showCoverProgressNotifier,
+                      'cover_progress',
+                      subtitle: '如 8/12 或已看集数',
+                    ),
+                    _buildDivider(),
+                    _buildDisplayItemToggle(
+                      '封面显示类型',
+                      SettingsManager().showCoverTypeNotifier,
+                      'cover_type',
+                      subtitle: '番剧 / 漫画图标，默认关闭以减少噪音',
+                    ),
+                    _buildDivider(),
+                    _buildDisplayItemToggle(
+                      '系列显示作品数',
+                      SettingsManager().showCoverSeriesCountNotifier,
+                      'cover_series_count',
+                    ),
+                    _buildDivider(),
+                    _buildSliderItem(
+                      icon: Icons.format_size_rounded,
+                      color: Colors.pinkAccent,
+                      title: '信息层大小',
+                      value: '${(_badgeScale * 100).round()}%',
+                      slider: Slider(
+                        value: _badgeScale,
+                        min: 0.8,
+                        max: 1.3,
+                        divisions: 10,
+                        label: '${(_badgeScale * 100).round()}%',
+                        onChanged: (val) => _updateSetting('badge_scale', val),
                       ),
                     ),
-                    onTap: () {},
-                  ),
+                    _buildDivider(),
+                    _buildSliderItem(
+                      icon: Icons.opacity_outlined,
+                      color: Colors.blue,
+                      title: '信息层透明度',
+                      value: '${(_badgeOpacity * 100).round()}%',
+                      slider: Slider(
+                        value: _badgeOpacity,
+                        min: 0.35,
+                        max: 1.0,
+                        divisions: 13,
+                        label: '${(_badgeOpacity * 100).round()}%',
+                        onChanged: (val) =>
+                            _updateSetting('badge_opacity', val),
+                      ),
+                    ),
+                    _buildDivider(),
+                    _buildSliderItem(
+                      icon: Icons.rounded_corner,
+                      color: Colors.deepPurple,
+                      title: '信息层圆角',
+                      value: '${_badgeRadius.round()} px',
+                      slider: Slider(
+                        value: _badgeRadius,
+                        min: 0,
+                        max: 24,
+                        divisions: 12,
+                        label: '${_badgeRadius.round()} px',
+                        onChanged: (val) => _updateSetting('badge_radius', val),
+                      ),
+                    ),
+                    _buildDivider(),
+                    _buildMenuTile(
+                      icon: Icons.restart_alt_rounded,
+                      color: Colors.redAccent,
+                      title: '恢复首页推荐设置',
+                      subtitle: '仅重置首页布局与封面信息层',
+                      trailing: const Icon(
+                        Icons.chevron_right,
+                        color: Colors.grey,
+                      ),
+                      onTap: _resetHomeDisplaySettings,
+                    ),
+                  ]),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  _buildSectionTitle('详情页定制'),
+                  _buildSettingsCard([
+                    _buildDetailLayoutTile(),
+                    _buildDivider(),
+                    _buildModuleManagementTile(),
+                  ]),
+                  const SizedBox(height: AppSpacing.xl),
+
+                  _buildSectionTitle('界面展示'),
+                  _buildSettingsCard([
+                    _buildSliderItem(
+                      icon: Icons.text_fields_outlined,
+                      color: Colors.teal,
+                      title: '字体大小',
+                      value: '${(_fontScale * 100).round()}%',
+                      slider: Slider(
+                        value: _fontScale,
+                        min: 0.8,
+                        max: 1.4,
+                        divisions: 6,
+                        onChanged: (val) => _updateSetting('font_scale', val),
+                      ),
+                    ),
+                    _buildDivider(),
+                    _buildSliderItem(
+                      icon: Icons.rounded_corner,
+                      color: Colors.deepPurple,
+                      title: '封面圆角',
+                      value: '${_coverBorderRadius.round()} px',
+                      slider: Slider(
+                        value: _coverBorderRadius,
+                        min: 0,
+                        max: 32,
+                        divisions: 16,
+                        label: '${_coverBorderRadius.round()} px',
+                        onChanged: (val) =>
+                            _updateSetting('cover_border_radius', val),
+                      ),
+                    ),
+                    if (showGridSettings) ...[
+                      _buildDivider(),
+                      _buildSliderItem(
+                        icon: Icons.grid_on_outlined,
+                        color: Colors.orange,
+                        title: '首页宫格列数',
+                        value: '$_gridColumns 列',
+                        slider: Slider(
+                          value: _gridColumns.toDouble(),
+                          min: 2,
+                          max: 5,
+                          divisions: 3,
+                          onChanged: (val) =>
+                              _updateSetting('grid_columns', val.toInt()),
+                        ),
+                      ),
+                      _buildDivider(),
+                      _buildMenuTile(
+                        icon: Icons.subtitles_outlined,
+                        color: Colors.blueGrey,
+                        title: '封面标题位置',
+                        trailing: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _titlePosition,
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                _updateSetting('title_position', newValue);
+                              }
+                            },
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'on_cover',
+                                child: Text(
+                                  '封面底部',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'below_cover',
+                                child: Text(
+                                  '封面外下方',
+                                  style: TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        onTap: () {},
+                      ),
+                    ],
+                  ]),
+                  const SizedBox(height: AppSpacing.xl),
+                  _buildSectionTitle('启动封面'),
+                  _buildSettingsCard([_buildSplashSection()]),
+                  const SizedBox(height: AppSpacing.xl),
+                  _buildSectionTitle('数据项显隐'),
+                  _buildSettingsCard([
+                    _buildDisplayItemToggle(
+                      '显示标题',
+                      SettingsManager().showTitleNotifier,
+                      'title',
+                    ),
+                    _buildDivider(),
+                    _buildDisplayItemToggle(
+                      '显示评分',
+                      SettingsManager().showRatingNotifier,
+                      'rating',
+                    ),
+                    _buildDivider(),
+                    _buildDisplayItemToggle(
+                      '显示进度',
+                      SettingsManager().showProgressNotifier,
+                      'progress',
+                    ),
+                    _buildDivider(),
+                    _buildDisplayItemToggle(
+                      '显示类型图标',
+                      SettingsManager().showSubjectTypeNotifier,
+                      'subject_type',
+                      subtitle: '番剧 / 漫画标识',
+                    ),
+                  ]),
+                  const SizedBox(height: AppSpacing.xxl),
                 ],
-              ]),
-              const SizedBox(height: AppSpacing.xl),
-              _buildSectionTitle('启动封面'),
-              _buildSettingsCard([_buildSplashSection()]),
-              const SizedBox(height: AppSpacing.xl),
-              _buildSectionTitle('数据项显隐'),
-              _buildSettingsCard([
-                _buildDisplayItemToggle(
-                  '显示标题',
-                  SettingsManager().showTitleNotifier,
-                  'title',
-                ),
-                _buildDivider(),
-                _buildDisplayItemToggle(
-                  '显示评分',
-                  SettingsManager().showRatingNotifier,
-                  'rating',
-                ),
-                _buildDivider(),
-                _buildDisplayItemToggle(
-                  '显示进度',
-                  SettingsManager().showProgressNotifier,
-                  'progress',
-                ),
-                _buildDivider(),
-                _buildDisplayItemToggle(
-                  '显示类型图标',
-                  SettingsManager().showSubjectTypeNotifier,
-                  'subject_type',
-                  subtitle: '番剧 / 漫画标识',
-                ),
-              ]),
-              const SizedBox(height: AppSpacing.xxl),
-            ],
+              ),
+            ),
           );
         },
       ),
@@ -220,10 +379,9 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
                 ),
                 child: Text(
                   title,
-                  style: Theme.of(ctx)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(
+                    ctx,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
               Flexible(
@@ -317,9 +475,8 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
             options: RatingIcon.values,
             selected: selected,
             labelOf: (i) => i.label,
-            descOf: (i) => i == RatingIcon.none
-                ? '只显示评分数字，不带前缀'
-                : '示例：${i.emoji} 8.5',
+            descOf: (i) =>
+                i == RatingIcon.none ? '只显示评分数字，不带前缀' : '示例：${i.emoji} 8.5',
             leadingOf: (i) => _RatingIconLeading(icon: i),
             onSelect: SettingsManager().setRatingIcon,
           ),
@@ -364,15 +521,14 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
       trailing: const Icon(Icons.chevron_right, color: Colors.grey),
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const DetailModuleManagementPage(),
-          ),
+          MaterialPageRoute(builder: (_) => const DetailModuleManagementPage()),
         );
       },
     );
   }
 
   Widget _buildSectionTitle(String title) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(left: 8, bottom: 12),
       child: Text(
@@ -380,7 +536,7 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.bold,
-          color: Colors.grey[600],
+          color: colorScheme.onSurfaceVariant,
           letterSpacing: 1.2,
         ),
       ),
@@ -388,28 +544,27 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
   }
 
   Widget _buildSettingsCard(List<Widget> children) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        boxShadow: AppElevation.card(context),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.35),
+        ),
       ),
       child: Column(children: children),
     );
   }
 
   Widget _buildDivider() {
+    final colorScheme = Theme.of(context).colorScheme;
     return Divider(
       height: 1,
       indent: 60,
       endIndent: 20,
-      color: Colors.grey[100],
+      color: colorScheme.outlineVariant.withValues(alpha: 0.35),
     );
   }
 
@@ -554,6 +709,16 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
         return Icons.explore_outlined;
       case 'subject_type':
         return Icons.category_outlined;
+      case 'cover_status':
+        return Icons.label_outline;
+      case 'cover_rating':
+        return Icons.star_outline_rounded;
+      case 'cover_progress':
+        return Icons.timelapse_rounded;
+      case 'cover_type':
+        return Icons.category_outlined;
+      case 'cover_series_count':
+        return Icons.layers_outlined;
       default:
         return Icons.settings_outlined;
     }
@@ -577,6 +742,16 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
         return Colors.purple;
       case 'subject_type':
         return Colors.teal;
+      case 'cover_status':
+        return Colors.blue;
+      case 'cover_rating':
+        return Colors.amber;
+      case 'cover_progress':
+        return Colors.green;
+      case 'cover_type':
+        return Colors.teal;
+      case 'cover_series_count':
+        return Colors.deepPurple;
       default:
         return Colors.grey;
     }
@@ -604,10 +779,7 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
                 },
               ),
               onTap: () {
-                SettingsManager().setShowItem(
-                  'enable_custom_splash',
-                  !enabled,
-                );
+                SettingsManager().setShowItem('enable_custom_splash', !enabled);
               },
             ),
 
@@ -674,13 +846,16 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
                       fit: BoxFit.cover,
                       // key 强制刷新，防止换图后仍命中老缓存
                       key: ValueKey(currentPath),
-                      errorBuilder: (_, __, ___) => Icon(
+                      errorBuilder: (_, _, _) => Icon(
                         Icons.broken_image_outlined,
                         color: Colors.grey[400],
                       ),
                     )
-                  : Icon(Icons.add_photo_alternate_outlined,
-                      color: Colors.grey[400], size: 28),
+                  : Icon(
+                      Icons.add_photo_alternate_outlined,
+                      color: Colors.grey[400],
+                      size: 28,
+                    ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -696,16 +871,14 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
                   ),
                   Text(
                     hasImage ? "点击更换图片" : "从相册选择并裁剪",
-                    style:
-                        TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                   ),
                 ],
               ),
             ),
             if (hasImage)
               IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: Colors.redAccent),
+                icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                 tooltip: "清除封面",
                 onPressed: _clearSplashImage,
               ),
@@ -730,20 +903,20 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
 
       // 复制到永久目录 splash/cover_<timestamp>.<ext>
       final Directory docDir = await getApplicationDocumentsDirectory();
-      final Directory splashDir =
-          Directory(p.join(docDir.path, 'splash'));
+      final Directory splashDir = Directory(p.join(docDir.path, 'splash'));
       if (!await splashDir.exists()) {
         await splashDir.create(recursive: true);
       }
 
       // 清理旧文件
-      final String oldPath =
-          SettingsManager().splashImagePathNotifier.value;
+      final String oldPath = SettingsManager().splashImagePathNotifier.value;
       if (oldPath.isNotEmpty) {
         try {
           final old = File(oldPath);
           if (await old.exists()) await old.delete();
-        } catch (_) {/* ignore */}
+        } catch (_) {
+          /* ignore */
+        }
       }
 
       final String ext = p.extension(cropped).isNotEmpty
@@ -758,33 +931,35 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
       await SettingsManager().setSplashImagePath(newPath);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('启动封面已更新喵 ~')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('启动封面已更新喵 ~')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('选择失败：$e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('选择失败：$e')));
       }
     }
   }
 
   /// 清除当前封面（仅清空设置 + 删除文件，不关闭主开关）
   Future<void> _clearSplashImage() async {
-    final String oldPath =
-        SettingsManager().splashImagePathNotifier.value;
+    final String oldPath = SettingsManager().splashImagePathNotifier.value;
     if (oldPath.isNotEmpty) {
       try {
         final f = File(oldPath);
         if (await f.exists()) await f.delete();
-      } catch (_) {/* ignore */}
+      } catch (_) {
+        /* ignore */
+      }
     }
     await SettingsManager().setSplashImagePath('');
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已清除自定义启动封面')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已清除自定义启动封面')));
     }
   }
 
@@ -793,10 +968,7 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
     if (!mounted) return null;
     return await Navigator.of(context).push<String>(
       MaterialPageRoute(
-        builder: (_) => ImageCropPage(
-          imagePath: sourcePath,
-          title: '裁剪启动封面',
-        ),
+        builder: (_) => ImageCropPage(imagePath: sourcePath, title: '裁剪启动封面'),
         fullscreenDialog: true,
       ),
     );
@@ -821,35 +993,52 @@ class _BadgeStylePreview extends StatelessWidget {
         borderRadius: BorderRadius.circular(6),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Stack(
-        fit: StackFit.expand,
-        children: _buildLayers(),
-      ),
+      child: Stack(fit: StackFit.expand, children: _buildLayers()),
     );
   }
 
   List<Widget> _buildLayers() {
     switch (style) {
-      case BadgeStyle.floating:
+      case BadgeStyle.overlay:
         return [
           Positioned(
-            top: 4,
-            left: 4,
-            child: _MiniPill(color: _statusColor),
-          ),
-          const Positioned(
-            top: 4,
-            right: 4,
-            child: _MiniPill(color: Colors.black54, isRating: true),
+            left: 3,
+            right: 3,
+            bottom: 3,
+            child: Container(
+              height: 16,
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 5,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      color: _statusColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    width: 10,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(1.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ];
-      case BadgeStyle.flush:
+      case BadgeStyle.corners:
         return [
-          Positioned(
-            top: 0,
-            left: 0,
-            child: _MiniFlush(color: _statusColor),
-          ),
+          Positioned(top: 0, left: 0, child: _MiniFlush(color: _statusColor)),
           const Positioned(
             top: 0,
             right: 0,
@@ -913,24 +1102,6 @@ class _BadgeStylePreview extends StatelessWidget {
           ),
         ];
     }
-  }
-}
-
-class _MiniPill extends StatelessWidget {
-  final Color color;
-  final bool isRating;
-  const _MiniPill({required this.color, this.isRating = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: isRating ? 12 : 10,
-      height: 5,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(1.5),
-      ),
-    );
   }
 }
 
@@ -1007,10 +1178,7 @@ class _OptionSheetTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     description,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -1018,8 +1186,11 @@ class _OptionSheetTile extends StatelessWidget {
             if (isSelected)
               Icon(Icons.check_circle_rounded, color: accent, size: 22)
             else
-              Icon(Icons.radio_button_unchecked,
-                  color: cs.outlineVariant, size: 22),
+              Icon(
+                Icons.radio_button_unchecked,
+                color: cs.outlineVariant,
+                size: 22,
+              ),
           ],
         ),
       ),

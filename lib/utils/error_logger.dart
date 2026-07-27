@@ -1,4 +1,6 @@
-﻿import 'dart:collection';
+import 'dart:collection';
+
+import 'operation_log_service.dart';
 
 class ErrorLogger {
   static final ErrorLogger _instance = ErrorLogger._internal();
@@ -25,6 +27,7 @@ class ErrorLogger {
       'error': error.toString(),
       'stackTrace': stackTrace?.toString() ?? '无堆栈信息',
     });
+    OperationLogService.instance.recordError(error, stackTrace);
   }
 
   void clearLogs() {

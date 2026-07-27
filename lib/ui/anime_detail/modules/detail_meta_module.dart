@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../detail_props.dart';
 import 'module_section.dart';
 
-/// 详细元数据：放送日期 / 制作公司 / 观看起止日期
+/// 详细元数据：放送/出版信息与观看/阅读起止日期
 ///
 /// 自动跳过空字段；若全部为空则整个模块返回空。
 class DetailMetaModule extends StatelessWidget {
@@ -15,43 +15,53 @@ class DetailMetaModule extends StatelessWidget {
     final rows = <_MetaRow>[];
 
     if (props.airDate.isNotEmpty) {
-      rows.add(_MetaRow(
-        icon: Icons.calendar_today_outlined,
-        label: props.isAnime ? '放送日期' : '出版日期',
-        value: props.airDate,
-      ));
+      rows.add(
+        _MetaRow(
+          icon: Icons.calendar_today_outlined,
+          label: props.subjectProfile.dateLabel,
+          value: props.airDate,
+        ),
+      );
     }
     if (props.studio.isNotEmpty) {
-      rows.add(_MetaRow(
-        icon: props.isAnime
-            ? Icons.business_outlined
-            : Icons.history_edu_outlined,
-        label: props.isAnime ? '制作公司' : '出版 / 发行',
-        value: props.studio,
-      ));
+      rows.add(
+        _MetaRow(
+          icon: props.isAnime
+              ? Icons.business_outlined
+              : Icons.history_edu_outlined,
+          label: props.subjectProfile.providerLabel,
+          value: props.studio,
+        ),
+      );
     }
     if (props.watchStartDate.isNotEmpty) {
-      rows.add(_MetaRow(
-        icon: Icons.play_arrow_outlined,
-        label: '开始观看',
-        value: props.watchStartDate,
-      ));
+      rows.add(
+        _MetaRow(
+          icon: Icons.play_arrow_outlined,
+          label: props.subjectProfile.startLabel,
+          value: props.watchStartDate,
+        ),
+      );
     }
     if (props.watchFinishDate.isNotEmpty) {
-      rows.add(_MetaRow(
-        icon: Icons.done_all_outlined,
-        label: '看完时间',
-        value: props.watchFinishDate,
-      ));
+      rows.add(
+        _MetaRow(
+          icon: Icons.done_all_outlined,
+          label: props.subjectProfile.finishLabel,
+          value: props.watchFinishDate,
+        ),
+      );
     }
-    // 已观看天数（若起止齐全）
+    // 已观看/阅读天数（若起止齐全）
     final span = _watchedDays(props);
     if (span != null) {
-      rows.add(_MetaRow(
-        icon: Icons.access_time_outlined,
-        label: '观看跨度',
-        value: '$span 天',
-      ));
+      rows.add(
+        _MetaRow(
+          icon: Icons.access_time_outlined,
+          label: props.subjectProfile.spanLabel,
+          value: '$span 天',
+        ),
+      );
     }
 
     if (rows.isEmpty) return const SizedBox.shrink();
@@ -110,20 +120,14 @@ class _MetaRow extends StatelessWidget {
           const SizedBox(width: 12),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 13,
-              color: cs.onSurfaceVariant,
-            ),
+            style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
           ),
           const Spacer(),
           Flexible(
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
