@@ -21,7 +21,7 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  String _version = "1.2.5"; // 默认回退值
+  String _version = "1.3.8"; // 默认回退值
 
   @override
   void initState() {
@@ -154,7 +154,7 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: Icons.science,
               color: Colors.orange,
               title: '测试功能',
-              subtitle: '错误日志与更多实验性功能',
+              subtitle: '诊断日志与更多实验性功能',
               onTap: () {
                 Navigator.push(
                   context,

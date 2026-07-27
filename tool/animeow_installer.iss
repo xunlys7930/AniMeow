@@ -1,7 +1,7 @@
 ; =====================================================================
 ;  AniMeow Windows 桌面端安装包脚本 (Inno Setup 6)
 ;  由 build_windows.bat 调用，命令示例：
-;    ISCC.exe /DMyAppVersion=1.3.7 tool\animeow_installer.iss
+;    ISCC.exe /DMyAppVersion=1.3.8 tool\animeow_installer.iss
 ;  MyAppVersion 由 bat 解析 pubspec.yaml 后通过 /D 传入。
 ; =====================================================================
 #define MyAppName          "AniMeow"

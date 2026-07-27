@@ -555,6 +555,23 @@ class DiscoveryPageState extends State<DiscoveryPage>
           final horizontalPadding = AppBreakpoints.pagePadding(
             constraints.maxWidth,
           );
+          // 手机端固定使用 3 列。使用 190dp 的最大卡片宽度时，Flutter
+          // 在常见的 360~430dp 屏幕上会自动算出 2 列，导致发现页与首页
+          // 的默认宫格密度不一致；桌面端继续使用自适应卡片宽度。
+          final gridDelegate = constraints.maxWidth < AppBreakpoints.compact
+              ? SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 0.62,
+                  crossAxisSpacing: AppSpacing.md,
+                  mainAxisSpacing: AppSpacing.lg,
+                )
+              : const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 190,
+                  childAspectRatio: 0.62,
+                  crossAxisSpacing: AppSpacing.md,
+                  mainAxisSpacing: AppSpacing.lg,
+                );
+
           return GridView.builder(
             controller: _scrollController,
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -564,12 +581,7 @@ class DiscoveryPageState extends State<DiscoveryPage>
               horizontalPadding,
               AppSpacing.xxl * 2,
             ),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 190,
-              childAspectRatio: 0.62,
-              crossAxisSpacing: AppSpacing.md,
-              mainAxisSpacing: AppSpacing.lg,
-            ),
+            gridDelegate: gridDelegate,
             itemCount: _results.length + (_hasMore ? 1 : 0),
             itemBuilder: (context, index) {
               if (index == _results.length) {

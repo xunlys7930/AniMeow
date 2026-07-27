@@ -74,13 +74,12 @@ const ANIME_ANALYSIS_MAX_STATS_BYTES = parseIntegerEnv(
 
 // 默认版本更新信息
 const DEFAULT_UPDATE_INFO = {
-    versionCode: 24,
-    versionName: '1.3.7',
+    versionCode: 25,
+    versionName: '1.3.8',
     updateLog:
-        '【首页数量修复】“全部”旁显示完整作品数，不再受 250 条分页上限影响；' +
-        '【角色删除修复】支持仅解除当前作品关联或从角色库永久删除；' +
-        '【ABCD 评级】作品评分可在 0–10 分与 A / B / C / D 评级间切换；' +
-        '【状态颜色自定义】新增 HSV 拾色器与 RGB / HEX 颜色输入。',
+        '【首页快捷设置】支持在首页直接调整宫格列数；' +
+        '【可选诊断日志】可记录并复制关键操作与错误信息，默认关闭；' +
+        '【问题修复】修复了若干 bug。',
     isForceUpdate: false,
     // 自建实例必须通过 UPDATE_DOWNLOAD_URL 配置真实下载地址。
     downloadUrl: '',

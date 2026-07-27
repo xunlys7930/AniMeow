@@ -11,6 +11,7 @@ import 'ui/components/keep_alive_wrapper.dart';
 import 'providers/data_refresh_provider.dart';
 import 'ui/components/app_brand_icon.dart';
 import 'ui/design_tokens.dart';
+import 'utils/operation_log_service.dart';
 
 /// 应用主壳层（替代旧的 MainScreen）
 /// 设计 4 个底部 Tab：**追番 / 发现 / 日历 / 我的**。
@@ -44,6 +45,11 @@ class _MainShellState extends State<MainShell> {
   void _goToDestination(_ShellDestination destination) {
     if (_currentDestination == destination) return;
     HapticFeedback.selectionClick();
+    OperationLogService.instance.record(
+      '切换主导航',
+      screen: '主壳',
+      details: {'destination': destination.name},
+    );
     setState(() => _currentDestination = destination);
   }
 

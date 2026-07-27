@@ -30,6 +30,19 @@ enum HomeLayout {
   /// 推荐宫格（多列封面推荐流，角标样式跟随封面设置）
   recommendGrid;
 
+  /// 是否支持通过首页宫格列数设置调整封面排列。
+  bool get supportsGridColumns {
+    switch (this) {
+      case HomeLayout.bentoHome:
+      case HomeLayout.posterWall:
+      case HomeLayout.recommendGrid:
+        return true;
+      case HomeLayout.cardFeed:
+      case HomeLayout.compactIndex:
+        return false;
+    }
+  }
+
   /// 用于显示的中文名
   String get label {
     switch (this) {

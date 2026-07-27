@@ -266,7 +266,7 @@ class MyPageState extends State<MyPage> {
                         icon: Icons.science_outlined,
                         color: Colors.deepOrange,
                         title: '测试功能',
-                        subtitle: '错误日志与实验性功能',
+                        subtitle: '诊断日志与实验性功能',
                         onTap: () => _push(const TestingFeaturesPage()),
                       ),
                     ]),

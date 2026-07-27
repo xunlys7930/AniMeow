@@ -102,10 +102,7 @@ class _SettingsDisplayPageState extends State<SettingsDisplayPage> {
       body: ValueListenableBuilder<HomeLayout>(
         valueListenable: SettingsManager().homeLayoutNotifier,
         builder: (context, layout, _) {
-          final showGridSettings =
-              layout == HomeLayout.posterWall ||
-              layout == HomeLayout.bentoHome ||
-              layout == HomeLayout.recommendGrid;
+          final showGridSettings = layout.supportsGridColumns;
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 960),

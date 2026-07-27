@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../utils/logger.dart';
 import '../models/character_group_package.dart';
@@ -16,6 +17,7 @@ import 'dao/character_dao.dart';
 /// 数据库帮助类，管理应用数据存储
 /// 使用 SQLite 数据库，支持跨平台（包括桌面端）
 class DatabaseHelper {
+  static const String _databaseFileName = 'anime_tracker_v5.db';
   static const String animesTable = 'animes';
   static const String tagsTable = 'tags';
   static const String animeTagsTable = 'anime_tags';
@@ -45,7 +47,9 @@ class DatabaseHelper {
   late final SeriesDao seriesDao = SeriesDao();
   late final WatchStatusDao watchStatusDao = WatchStatusDao();
   late final WatchRecordDao watchRecordDao = WatchRecordDao();
-  late final LogDao logDao = LogDao();
+  // 保留旧版 DatabaseHelper 日志 API 对主数据库的语义；可选诊断日志服务
+  // 使用不带 provider 的 LogDao，写入独立的诊断数据库。
+  late final LogDao logDao = LogDao(databaseProvider: () => database);
   late final CharacterDao characterDao = CharacterDao();
 
   final Map<String, StreamController<void>> _tableControllers = {};
@@ -110,7 +114,7 @@ class DatabaseHelper {
   /// 初始化数据库连接
   Future<Database> _initDatabase() async {
     // 在 Windows/Linux 桌面端使用 ffi 实现
-    if (Platform.isWindows || Platform.isLinux) {
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
     }
@@ -242,15 +246,8 @@ class DatabaseHelper {
       )
     ''');
 
-    // 创建应用日志表（版本 7）
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS app_logs(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        message TEXT,
-        stack_trace TEXT,
-        timestamp TEXT -- ISO8601
-      )
-    ''');
+    // 创建应用日志表（基础结构）
+    await _createAppLogsTable(db);
 
     await _createAnimeAnalysisRecordsTable(db);
     await _createCharacterTables(db);
@@ -267,6 +264,17 @@ class DatabaseHelper {
         analysis TEXT,
         stats_json TEXT,
         created_at TEXT
+      )
+    ''');
+  }
+
+  Future<void> _createAppLogsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS app_logs(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message TEXT,
+        stack_trace TEXT,
+        timestamp TEXT
       )
     ''');
   }
@@ -1038,7 +1046,11 @@ class DatabaseHelper {
   // ---- 日志管理 (LogDao) ----
   Future<int> insertLog(String message, String? stackTrace) =>
       logDao.insertLog(message, stackTrace);
-  Future<List<Map<String, dynamic>>> getLogs() => logDao.getLogs();
+  Future<List<Map<String, dynamic>>> getLogs({int limit = 500}) =>
+      logDao.getLogs(limit: limit);
+  Future<void> insertLogs(List<Map<String, String?>> logs) =>
+      logDao.insertLogs(logs);
+  Future<int> clearLogs() => logDao.clearLogs();
   Future<int> clearOldLogs() => logDao.clearOldLogs();
 
   // ---- AI 看番风格分析记录 ----
@@ -1080,7 +1092,61 @@ class DatabaseHelper {
 
   /// 获取数据库文件路径（用于备份操作）
   Future<String> getDbPath() async {
-    return join(await getDatabasesPath(), 'anime_tracker_v5.db');
+    // sqflite_common_ffi 在桌面端默认使用相对当前工作目录的
+    // `.dart_tool/sqflite_common_ffi/databases`。发布版 Windows 程序通常
+    // 位于 Program Files，当前目录可能不可写，从而导致 SQLite code 14。
+    // 将桌面数据库放到用户可写的应用支持目录，避免依赖启动目录权限。
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      final supportDirectory = await getApplicationSupportDirectory();
+      final databaseDirectory = Directory(
+        join(supportDirectory.path, 'databases'),
+      );
+      await databaseDirectory.create(recursive: true);
+      final targetPath = join(databaseDirectory.path, _databaseFileName);
+      await _migrateLegacyDesktopDatabase(targetPath);
+      return targetPath;
+    }
+
+    final databaseDirectory = Directory(await getDatabasesPath());
+    await databaseDirectory.create(recursive: true);
+    return join(databaseDirectory.path, _databaseFileName);
+  }
+
+  /// 将旧版桌面端相对工作目录中的数据库迁移到用户数据目录。
+  ///
+  /// 迁移只在目标文件不存在时执行，不会覆盖用户已有数据；迁移失败时
+  /// 保留新路径，让后续打开流程仍能给出明确的数据库错误，而不会因为
+  /// 兼容逻辑阻断启动。
+  Future<void> _migrateLegacyDesktopDatabase(String targetPath) async {
+    try {
+      final targetFile = File(targetPath);
+      if (await targetFile.exists()) return;
+
+      final executableDirectory = File(Platform.resolvedExecutable).parent.path;
+      final legacyDirectories = <String>{
+        await getDatabasesPath(),
+        join(
+          executableDirectory,
+          '.dart_tool',
+          'sqflite_common_ffi',
+          'databases',
+        ),
+      };
+
+      for (final legacyDirectory in legacyDirectories) {
+        final legacyPath = join(legacyDirectory, _databaseFileName);
+        if (normalize(legacyPath) == normalize(targetPath)) continue;
+
+        final legacyFile = File(legacyPath);
+        if (!await legacyFile.exists()) continue;
+
+        await legacyFile.copy(targetPath);
+        logger.i('已将旧版桌面数据库迁移到用户数据目录: $targetPath');
+        return;
+      }
+    } catch (error) {
+      logger.w('迁移旧版桌面数据库失败，将使用新数据库路径: $error');
+    }
   }
 
   /// 关闭数据库连接（用于恢复操作前）

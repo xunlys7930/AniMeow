@@ -24,6 +24,8 @@ import 'package:anime_tracker/ui/pages/editor/anime_editor_display_sheet.dart';
 import 'package:anime_tracker/ui/pages/editor/anime_editor_validation.dart';
 import 'package:anime_tracker/utils/notification_service.dart';
 import 'package:anime_tracker/utils/anime_rating.dart';
+import 'package:anime_tracker/utils/error_logger.dart';
+import 'package:anime_tracker/utils/operation_log_service.dart';
 
 part 'add_anime_page_ui.dart';
 
@@ -1482,6 +1484,16 @@ class _AddAnimePageState extends State<AddAnimePage> {
       _isSaving = true;
       _formErrorMessage = null;
     });
+    OperationLogService.instance.record(
+      _isEditMode ? '开始保存作品修改' : '开始添加作品',
+      screen: '作品编辑',
+      details: {
+        'mode': _isEditMode ? 'edit' : 'create',
+        'subjectType': _subjectType,
+        'tagCount': _selectedTagIds.length,
+        'reminderEnabled': _isReminderEnabled,
+      },
+    );
 
     try {
       // 查重逻辑
@@ -1713,8 +1725,19 @@ class _AddAnimePageState extends State<AddAnimePage> {
         );
       }
 
+      OperationLogService.instance.record(
+        _isEditMode ? '作品修改保存成功' : '作品添加成功',
+        screen: '作品编辑',
+        details: {'id': finalId},
+      );
       if (mounted) Navigator.pop(context, true);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      ErrorLogger.instance.addError(e, stackTrace);
+      OperationLogService.instance.record(
+        '作品保存失败',
+        screen: '作品编辑',
+        details: {'mode': _isEditMode ? 'edit' : 'create'},
+      );
       if (mounted) {
         final message = "保存失败: $e";
         ScaffoldMessenger.of(
