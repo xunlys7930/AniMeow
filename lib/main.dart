@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:logger/logger.dart' show Level, Logger;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'main_shell.dart';
@@ -17,36 +18,14 @@ import 'ui/components/restart_widget.dart';
 import 'ui/splash_screen.dart';
 import 'utils/error_logger.dart';
 import 'utils/notification_service.dart';
+import 'utils/operation_log_service.dart';
 import 'package:provider/provider.dart';
 import 'providers/data_refresh_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化日期格式化数据 (修复日历红屏)
-  await initializeDateFormatting('zh_CN', null);
-
-  // 初始化主题与设置
-  await ThemeManager().loadTheme();
-  await SettingsManager().loadSettings();
-
-  // 桌面端数据库初始化
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
-  setupServiceLocator();
-
-  // 通知服务异常不应阻止 APP 启动；具体原因会在提醒管理页中展示。
-  if (!kIsWeb && NotificationService().isSupported) {
-    try {
-      await NotificationService().init();
-    } catch (error, stack) {
-      ErrorLogger.instance.addError(error, stack);
-    }
-  }
-
-  // 全局错误捕获
+  // 尽早安装全局错误捕获，连启动阶段的异常也能保留在内存错误日志中。
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
     ErrorLogger.instance.addError(details.exception, details.stack);
@@ -56,6 +35,39 @@ void main() async {
     ErrorLogger.instance.addError(error, stack);
     return true; // 防止崩溃
   };
+
+  // 初始化日期格式化数据 (修复日历红屏)
+  await initializeDateFormatting('zh_CN', null);
+
+  // 初始化主题与设置
+  await ThemeManager().loadTheme();
+  await SettingsManager().loadSettings();
+  Logger.addLogListener((event) {
+    if (event.level >= Level.error) {
+      OperationLogService.instance.recordError(
+        event.error ?? event.message,
+        event.stackTrace,
+        screen: '运行日志',
+      );
+    }
+  });
+
+  // 桌面端数据库初始化
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+  setupServiceLocator();
+  OperationLogService.instance.record('应用启动', screen: '启动');
+
+  // 通知服务异常不应阻止 APP 启动；具体原因会在提醒管理页中展示。
+  if (!kIsWeb && NotificationService().isSupported) {
+    try {
+      await NotificationService().init();
+    } catch (error, stack) {
+      ErrorLogger.instance.addError(error, stack);
+    }
+  }
 
   runApp(const RestartWidget(child: MyApp()));
 

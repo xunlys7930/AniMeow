@@ -138,6 +138,7 @@ backend/dumps/
 devtools_options.yaml
 
 # 忽略本地构建脚本
+build_all.bat
 build_android.bat
 build_windows.bat
 run.bat

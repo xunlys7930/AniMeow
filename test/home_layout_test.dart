@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:anime_tracker/ui/views/_shared/anime_poster_card.dart';
+import 'package:anime_tracker/ui/views/bento_home_view.dart';
 import 'package:anime_tracker/ui/views/home_layout.dart';
 
 void main() {
@@ -102,4 +103,85 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  testWidgets('bento home honors the requested columns on a narrow phone', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 800);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    Future<void> pumpGrid(int columns) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: BentoHomeView(props: _gridProps(columns))),
+        ),
+      );
+      await tester.pump();
+    }
+
+    await pumpGrid(3);
+    var delegate =
+        tester.widget<SliverGrid>(find.byType(SliverGrid)).gridDelegate
+            as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(delegate.crossAxisCount, 3);
+    expect(tester.takeException(), isNull);
+
+    await pumpGrid(2);
+    delegate =
+        tester.widget<SliverGrid>(find.byType(SliverGrid)).gridDelegate
+            as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(delegate.crossAxisCount, 2);
+    expect(tester.takeException(), isNull);
+  });
+}
+
+HomeViewProps _gridProps(int gridColumns) {
+  return HomeViewProps(
+    items: List.generate(
+      6,
+      (index) => {
+        'id': index + 1,
+        'type': 'anime',
+        'title': '测试作品 ${index + 1}',
+        'cover_url': null,
+        'status': '在看',
+        'watched_episodes': index,
+        'total_episodes': 12,
+        'subject_type': 'anime',
+      },
+    ),
+    totalItemCount: 6,
+    statusColors: const {'在看': Colors.indigo},
+    appDocDir: null,
+    isSelectionMode: false,
+    selectedIds: const {},
+    onItemTap: (_) {},
+    onItemLongPress: (_) {},
+    onRefresh: () async {},
+    onLoadMore: null,
+    hasMore: false,
+    gridColumns: gridColumns,
+    titlePosition: 'on_cover',
+    coverBorderRadius: 12,
+    badgeScale: 1,
+    badgeOpacity: 0.78,
+    badgeRadius: 10,
+    showTitle: true,
+    showRating: true,
+    showProgress: true,
+    showStatus: true,
+    showSubjectType: true,
+    badgeStyle: BadgeStyle.overlay,
+    showCoverStatus: true,
+    showCoverRating: true,
+    showCoverProgress: true,
+    showCoverType: true,
+    showCoverSeriesCount: true,
+    selectedStatus: '全部',
+    isInDefaultMode: false,
+    isSortedByPinyin: false,
+    progressTextOf: (_) => '0/12',
+  );
 }

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'ui/views/home_layout.dart';
 import 'ui/views/_shared/rating_icon.dart';
 import 'ui/anime_detail/detail_layout.dart';
+import 'utils/operation_log_service.dart';
 
 /// 设置管理器，负责应用设置的保存和通知
 /// 使用单例模式确保全局只有一个实例
@@ -178,6 +179,9 @@ class SettingsManager {
   /// 是否在「发现」/「资料库」顶部显示「云端资源发现」入口（默认 true，保持原行为）
   final ValueNotifier<bool> showServerDiscoveryNotifier = ValueNotifier(true);
 
+  /// 是否开启可选的本地操作/诊断日志（默认关闭）。
+  final ValueNotifier<bool> operationLogEnabledNotifier = ValueNotifier(false);
+
   /// Bangumi 数据源策略
   final ValueNotifier<BangumiApiMode> bangumiApiModeNotifier = ValueNotifier(
     BangumiApiMode.auto,
@@ -324,6 +328,9 @@ class SettingsManager {
         prefs.getBool('show_server_search') ?? false;
     showServerDiscoveryNotifier.value =
         prefs.getBool('show_server_discovery') ?? true;
+    operationLogEnabledNotifier.value =
+        prefs.getBool('operation_log_enabled') ?? false;
+    OperationLogService.instance.configure(operationLogEnabledNotifier.value);
     bangumiApiModeNotifier.value = BangumiApiMode.fromPersistKey(
       prefs.getString('bangumi_api_mode'),
     );
@@ -637,6 +644,25 @@ class SettingsManager {
       enableCustomSplashNotifier.value = value;
       await prefs.setBool('enable_custom_splash', value);
     }
+  }
+
+  /// 设置可选的本地操作日志开关。
+  ///
+  /// 关闭前会尽力刷入已经排队的日志；历史日志不会因关闭开关而自动删除，
+  /// 用户仍可进入诊断日志页面复制或手动清理。
+  Future<void> setOperationLogEnabled(bool value) async {
+    if (value) {
+      operationLogEnabledNotifier.value = true;
+      await OperationLogService.instance.setEnabled(true);
+      OperationLogService.instance.record('开启操作日志', screen: '测试功能');
+    } else {
+      OperationLogService.instance.record('关闭操作日志', screen: '测试功能');
+      await OperationLogService.instance.setEnabled(false);
+      operationLogEnabledNotifier.value = false;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('operation_log_enabled', value);
   }
 
   /// 设置自定义启动封面的本地路径（空字符串表示清除）

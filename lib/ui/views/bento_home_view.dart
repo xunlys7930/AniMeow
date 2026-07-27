@@ -282,8 +282,11 @@ class _AllGrid extends StatelessWidget {
     return SliverLayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.crossAxisExtent;
+        // 手机端也要保留默认的 3 列。之前把小于 380dp 的窗口限制为
+        // 2 列，导致默认值 3 以及设置中的 3~5 列都会被 clamp 成 2，
+        // 看起来就像首页宫格设置没有生效。
         final maxColumns = switch (width) {
-          < 380 => 2,
+          < AppBreakpoints.compact => 3,
           < 620 => 3,
           < 900 => 4,
           < 1180 => 5,

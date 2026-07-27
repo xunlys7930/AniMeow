@@ -14,7 +14,7 @@ router.get('/fetch-bangumi/:bgmId', async (req, res) => {
     const bgmId = req.params.bgmId;
     try {
         const bgmRes = await axios.get(`https://api.bgm.tv/v0/subjects/${bgmId}`, {
-            headers: { 'User-Agent': 'AniMeow/1.3.7 (+https://github.com/xunlys7930/AniMeow)' }
+            headers: { 'User-Agent': 'AniMeow/1.3.8 (+https://github.com/xunlys7930/AniMeow)' }
         });
         const data = bgmRes.data;
         let studio = '未知制作公司';

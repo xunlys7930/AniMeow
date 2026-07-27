@@ -7,6 +7,15 @@ class ChangelogPage extends StatelessWidget {
   // --- 应用更新日志数据 ---
   final List<Map<String, dynamic>> _changes = const [
     {
+      'version': 'v1.3.8',
+      'date': '2026-07-25',
+      'items': [
+        '【首页快捷设置】支持在首页工具栏直接调整宫格列数（2–5 列）',
+        '【可选诊断日志】新增默认关闭的操作日志开关，可记录关键操作与错误堆栈，并支持一键复制或清空',
+        '【问题修复】修复了若干 bug',
+      ],
+    },
+    {
       'version': 'v1.3.7',
       'date': '2026-07-22',
       'items': [

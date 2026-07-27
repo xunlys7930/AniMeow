@@ -1,13 +1,13 @@
-# AniMeow 1.3.7 功能测试清单
+# AniMeow 1.3.8 功能测试清单
 
-适用于 `1.3.7+24` 客户端和可选自建后端。每项记录“通过 / 失败 / 不适用”和测试环境。
+适用于 `1.3.8+25` 客户端和可选自建后端。每项记录“通过 / 失败 / 不适用”和测试环境。
 
 ## 发布前自动检查
 
 - [ ] `flutter pub get`
 - [ ] `flutter analyze --no-fatal-infos`（当前版本无 error/warning；信息级 lint 另行跟踪）
 - [ ] `flutter test`
-- [ ] Android Release 构建成功，版本为 `1.3.7 (24)`
+- [ ] Android Release 构建成功，版本为 `1.3.8 (25)`
 - [ ] Windows Release 构建成功
 - [ ] APK 通过 `zipalign`、签名和安装验证
 - [ ] APK Manifest、DEX、权限和资源中没有广告 SDK、广告组件或广告跟踪权限

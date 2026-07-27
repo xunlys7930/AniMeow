@@ -11,6 +11,7 @@ import 'package:anime_tracker/repositories/anime_repository.dart';
 import 'package:anime_tracker/repositories/tag_repository.dart';
 import 'package:anime_tracker/services/service_locator.dart';
 import 'package:anime_tracker/utils/logger.dart';
+import 'package:anime_tracker/utils/operation_log_service.dart';
 import 'package:anime_tracker/settings_manager.dart';
 import '../add_anime_page.dart';
 import '../../anime_detail/anime_detail_page.dart';
@@ -111,6 +112,11 @@ class _AnimeListPageViewState extends State<_AnimeListPageView> {
     }
 
     if (item['type'] == 'series') {
+      OperationLogService.instance.record(
+        '打开系列详情',
+        screen: '首页',
+        details: {'id': item['id']},
+      );
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -121,6 +127,11 @@ class _AnimeListPageViewState extends State<_AnimeListPageView> {
         ),
       ).then((_) => provider.refreshData());
     } else {
+      OperationLogService.instance.record(
+        '打开作品详情',
+        screen: '首页',
+        details: {'id': item['id']},
+      );
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -268,14 +279,19 @@ class _AnimeListPageViewState extends State<_AnimeListPageView> {
 
   void _navigateToAddPage() async {
     final provider = context.read<AnimeListProvider>();
+    OperationLogService.instance.record('打开添加作品页', screen: '首页');
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const AddAnimePage()),
     );
-    if (result == true) provider.refreshData();
+    if (result == true) {
+      OperationLogService.instance.record('完成添加作品', screen: '首页');
+      provider.refreshData();
+    }
   }
 
   Future<void> _showSortMenu() {
+    OperationLogService.instance.record('打开排序面板', screen: '首页');
     return _showAdaptivePanel(
       initialChildSize: 0.58,
       minChildSize: 0.42,
@@ -284,6 +300,7 @@ class _AnimeListPageViewState extends State<_AnimeListPageView> {
   }
 
   Future<void> _showFilterPanel() {
+    OperationLogService.instance.record('打开筛选面板', screen: '首页');
     return _showAdaptivePanel(
       initialChildSize: 0.88,
       minChildSize: 0.58,
@@ -833,6 +850,15 @@ class _AnimeListPageViewState extends State<_AnimeListPageView> {
           tooltip: '检查重复条目',
           onPressed: _showDuplicateChecker,
         ),
+        ValueListenableBuilder<HomeLayout>(
+          valueListenable: SettingsManager().homeLayoutNotifier,
+          builder: (context, layout, _) {
+            if (!layout.supportsGridColumns) {
+              return const SizedBox.shrink();
+            }
+            return _buildGridColumnsMenu();
+          },
+        ),
         IconButton(
           icon: const Icon(Icons.sort_rounded),
           tooltip: '排序：${provider.selectedSortLabel}',
@@ -854,6 +880,52 @@ class _AnimeListPageViewState extends State<_AnimeListPageView> {
               ),
             )
           : null,
+    );
+  }
+
+  Widget _buildGridColumnsMenu() {
+    final settings = SettingsManager();
+    return ValueListenableBuilder<int>(
+      valueListenable: settings.gridColumnsNotifier,
+      builder: (context, columns, _) {
+        return PopupMenuButton<int>(
+          tooltip: '首页列数：$columns 列',
+          icon: Badge(
+            label: Text('$columns'),
+            child: const Icon(Icons.view_column_rounded),
+          ),
+          onSelected: (value) {
+            HapticFeedback.selectionClick();
+            OperationLogService.instance.record(
+              '调整首页宫格列数',
+              screen: '首页',
+              details: {'columns': value},
+            );
+            unawaited(settings.setGridColumns(value));
+          },
+          itemBuilder: (context) => [
+            for (final count in const [2, 3, 4, 5])
+              PopupMenuItem<int>(
+                value: count,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 28,
+                      child: count == columns
+                          ? Icon(
+                              Icons.check_rounded,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.primary,
+                            )
+                          : null,
+                    ),
+                    Text('$count 列'),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 

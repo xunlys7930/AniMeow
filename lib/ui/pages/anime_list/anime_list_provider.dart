@@ -8,6 +8,8 @@ import 'package:anime_tracker/repositories/watch_repository.dart';
 import 'package:anime_tracker/services/service_locator.dart';
 import 'package:anime_tracker/settings_manager.dart';
 import 'package:anime_tracker/utils/anime_rating.dart';
+import 'package:anime_tracker/utils/error_logger.dart';
+import 'package:anime_tracker/utils/operation_log_service.dart';
 
 class DuplicateAnimeGroup {
   final String key;
@@ -138,6 +140,7 @@ class AnimeListProvider extends ChangeNotifier {
   // --- 初始化方法 ---
   void init() {
     _isLoading = true;
+    OperationLogService.instance.record('打开追番首页', screen: '首页');
     final defaultStart = SettingsManager().defaultStartStatusNotifier.value;
     if (defaultStart == '上次退出前') {
       _selectedStatus = SettingsManager().lastSelectedStatusNotifier.value;
@@ -154,23 +157,45 @@ class AnimeListProvider extends ChangeNotifier {
   void setSearchQuery(String query) {
     _searchQuery = query;
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () => refreshData());
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      OperationLogService.instance.record(
+        '执行搜索',
+        screen: '首页',
+        details: {'queryLength': _searchQuery.trim().length},
+      );
+      refreshData();
+    });
     notifyListeners();
   }
 
   // --- 状态与筛选设置 ---
   void setStatus(String status) {
     _selectedStatus = status;
+    OperationLogService.instance.record(
+      '切换观看状态筛选',
+      screen: '首页',
+      details: {'status': status},
+    );
     refreshData();
   }
 
   void setType(String type) {
     _selectedType = type;
+    OperationLogService.instance.record(
+      '切换作品类型筛选',
+      screen: '首页',
+      details: {'type': type},
+    );
     refreshData();
   }
 
   void toggleAndMode() {
     _isAndMode = !_isAndMode;
+    OperationLogService.instance.record(
+      '切换标签匹配模式',
+      screen: '首页',
+      details: {'andMode': _isAndMode},
+    );
     refreshData();
   }
 
@@ -180,11 +205,17 @@ class AnimeListProvider extends ChangeNotifier {
     } else {
       _selectedTagIds.add(tagId);
     }
+    OperationLogService.instance.record(
+      '切换标签筛选',
+      screen: '首页',
+      details: {'tagId': tagId, 'selectedCount': _selectedTagIds.length},
+    );
     refreshData();
   }
 
   void clearTags() {
     _selectedTagIds.clear();
+    OperationLogService.instance.record('清除标签筛选', screen: '首页');
     refreshData();
   }
 
@@ -194,11 +225,17 @@ class AnimeListProvider extends ChangeNotifier {
     } else {
       _selectedYears.add(year);
     }
+    OperationLogService.instance.record(
+      '切换年份筛选',
+      screen: '首页',
+      details: {'year': year, 'selectedCount': _selectedYears.length},
+    );
     refreshData();
   }
 
   void clearYears() {
     _selectedYears.clear();
+    OperationLogService.instance.record('清除年份筛选', screen: '首页');
     refreshData();
   }
 
@@ -227,6 +264,17 @@ class AnimeListProvider extends ChangeNotifier {
     _selectedTagIds
       ..clear()
       ..addAll(tagIds);
+    OperationLogService.instance.record(
+      '应用筛选条件',
+      screen: '首页',
+      details: {
+        'type': type,
+        'status': status,
+        'yearCount': years.length,
+        'tagCount': tagIds.length,
+        'andMode': isAndMode,
+      },
+    );
     refreshData();
   }
 
@@ -238,6 +286,7 @@ class AnimeListProvider extends ChangeNotifier {
     _isAndMode = false;
     _selectedYears.clear();
     _selectedTagIds.clear();
+    OperationLogService.instance.record('重置全部筛选', screen: '首页');
     refreshData();
   }
 
@@ -248,17 +297,32 @@ class AnimeListProvider extends ChangeNotifier {
     _selectedStatus = '全部';
     _selectedType = 'all';
     _selectedYears.clear();
+    OperationLogService.instance.record(
+      '按标签筛选作品',
+      screen: '首页',
+      details: {'tagId': tagId},
+    );
     refreshData();
   }
 
   // --- 排序管理 ---
   void setSortKeys(List<String> keys) {
     _selectedSortKeys = keys;
+    OperationLogService.instance.record(
+      '切换排序方式',
+      screen: '首页',
+      details: {'sort': keys.isEmpty ? '默认' : keys.first},
+    );
     refreshData();
   }
 
   void updateSortDirection(String key, String direction) {
     _sortDirections[key] = direction;
+    OperationLogService.instance.record(
+      '切换排序方向',
+      screen: '首页',
+      details: {'sort': key, 'direction': direction},
+    );
     refreshData();
   }
 
@@ -266,6 +330,7 @@ class AnimeListProvider extends ChangeNotifier {
   void resetSort() {
     _selectedSortKeys = ['默认 (最新添加)'];
     _sortDirections.updateAll((key, _) => key == '拼音' ? 'ASC' : 'DESC');
+    OperationLogService.instance.record('恢复默认排序', screen: '首页');
     refreshData();
   }
 
@@ -273,6 +338,10 @@ class AnimeListProvider extends ChangeNotifier {
   void toggleSelectionMode(bool enable) {
     _isSelectionMode = enable;
     _selectedAnimeIds.clear();
+    OperationLogService.instance.record(
+      enable ? '进入批量选择模式' : '退出批量选择模式',
+      screen: '首页',
+    );
     notifyListeners();
   }
 
@@ -307,6 +376,11 @@ class AnimeListProvider extends ChangeNotifier {
   /// 批量删除
   Future<void> batchDeleteSelected() async {
     if (_selectedAnimeIds.isEmpty) return;
+    OperationLogService.instance.record(
+      '批量删除作品',
+      screen: '首页',
+      details: {'count': _selectedAnimeIds.length},
+    );
     for (int id in _selectedAnimeIds) {
       await _animeRepo.deleteAnime(id);
     }
@@ -366,6 +440,11 @@ class AnimeListProvider extends ChangeNotifier {
   /// 批量修改状态
   Future<void> batchUpdateStatus(String newStatus) async {
     if (_selectedAnimeIds.isEmpty) return;
+    OperationLogService.instance.record(
+      '批量修改观看状态',
+      screen: '首页',
+      details: {'count': _selectedAnimeIds.length, 'status': newStatus},
+    );
     await _animeRepo.batchUpdateStatus(_selectedAnimeIds.toList(), newStatus);
     toggleSelectionMode(false);
     refreshData();
@@ -374,6 +453,11 @@ class AnimeListProvider extends ChangeNotifier {
   /// 批量同步封面
   Future<Map<String, int>> batchSyncCovers() async {
     if (_selectedAnimeIds.isEmpty) return {'success': 0, 'skip': 0, 'fail': 0};
+    OperationLogService.instance.record(
+      '批量同步封面',
+      screen: '首页',
+      details: {'count': _selectedAnimeIds.length},
+    );
     final results = await _animeRepo.syncCovers(_selectedAnimeIds.toList());
     toggleSelectionMode(false);
     refreshData();
@@ -383,6 +467,11 @@ class AnimeListProvider extends ChangeNotifier {
   /// 批量添加标签
   Future<void> batchAddTag(int tagId) async {
     if (_selectedAnimeIds.isEmpty) return;
+    OperationLogService.instance.record(
+      '批量添加标签',
+      screen: '首页',
+      details: {'count': _selectedAnimeIds.length, 'tagId': tagId},
+    );
     await _tagRepo.batchAddTagToAnimes(_selectedAnimeIds.toList(), tagId);
     toggleSelectionMode(false);
     refreshData();
@@ -391,6 +480,11 @@ class AnimeListProvider extends ChangeNotifier {
   /// 批量移除标签
   Future<void> batchRemoveTag(int tagId) async {
     if (_selectedAnimeIds.isEmpty) return;
+    OperationLogService.instance.record(
+      '批量移除标签',
+      screen: '首页',
+      details: {'count': _selectedAnimeIds.length, 'tagId': tagId},
+    );
     await _tagRepo.batchRemoveTagFromAnimes(_selectedAnimeIds.toList(), tagId);
     toggleSelectionMode(false);
     refreshData();
@@ -649,11 +743,17 @@ class AnimeListProvider extends ChangeNotifier {
       _isRefreshing = false;
       _loadError = null;
       notifyListeners();
-    } catch (error) {
+    } catch (error, stackTrace) {
       if (requestId != _refreshGeneration) return;
       _isLoading = false;
       _isRefreshing = false;
       _loadError = error;
+      ErrorLogger.instance.addError(error, stackTrace);
+      OperationLogService.instance.record(
+        '首页数据加载失败',
+        screen: '首页',
+        details: {'errorType': error.runtimeType.toString()},
+      );
       notifyListeners();
     }
   }
