@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <include domain="database" path="." />
+    <include domain="sharedpref" path="." />
+    <exclude domain="sharedpref" path="cloud_account_secure.xml" />
+    <exclude domain="sharedpref" path="app_update_download.xml" />
+    <include domain="file" path="datastore/" />
+    <include domain="file" path="configuration_profiles.json" />
+</full-backup-content>

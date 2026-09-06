@@ -1,0 +1,48 @@
+# Local/private configuration
+PROJECT_CONFIG_KEYS.md
+**/local.properties
+**/.env
+!**/.env.example
+**/keystore.properties
+**/*.jks
+**/*.keystore
+**/*.pem
+**/*.p12
+**/*.pfx
+
+# IDE and build output
+**/.gradle/
+**/.idea/
+**/.kotlin/
+**/build/
+**/captures/
+**/.externalNativeBuild/
+**/.cxx/
+**/node_modules/
+**/coverage/
+
+# Runtime logs and private exports
+**/*.log
+**/*.log.*
+**/crash-*.json
+**/diagnostics/
+**/restore_points/
+**/AniMeow_backup_*.zip
+**/anime_tracker_v5.db
+**/*.sqlite
+**/*.sqlite3
+
+# Generated install packages
+**/*.apk
+**/*.aab
+**/*.apks
+
+# Not part of this open-source distribution
+web/
+win/
+backend/
+scripts/
+
+# The deterministic, synthetic migration fixtures are intentionally public.
+!android_app/test-fixtures/legacy_v19_full.db
+!android_app/test-fixtures/legacy_v19_full.zip
