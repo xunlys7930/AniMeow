@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from design/icons/catalog.xml. Edit the catalog, then run generate.py. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:autoMirrored="true">
+    <path
+        android:pathData="M9,4H5Q3.5,4 3.5,5.5V18.5Q3.5,20 5,20H18.5Q20,20 20,18.5V15 M14,4H20V10 M20,4L10,14"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="1.65"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+</vector>

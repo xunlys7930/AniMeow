@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from design/icons/catalog.xml. Edit the catalog, then run generate.py. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:autoMirrored="false">
+    <group android:pivotX="12" android:pivotY="12" android:scaleX="0.92" android:scaleY="0.92">
+    <path
+        android:pathData="M7,3.5H7Q10.5,3.5 10.5,7V17Q10.5,20.5 7,20.5H7Q3.5,20.5 3.5,17V7Q3.5,3.5 7,3.5Z"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="2.45"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+    </group>
+    <group android:pivotX="12" android:pivotY="12" android:scaleX="0.92" android:scaleY="0.92">
+    <path
+        android:pathData="M17.25,3.5H17.25Q20.5,3.5 20.5,6.75V7.25Q20.5,10.5 17.25,10.5H17.25Q14,10.5 14,7.25V6.75Q14,3.5 17.25,3.5Z"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="2.45"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+    </group>
+    <group android:pivotX="12" android:pivotY="12" android:scaleX="0.92" android:scaleY="0.92">
+    <path
+        android:pathData="M17.25,14H17.25Q20.5,14 20.5,17.25V17.25Q20.5,20.5 17.25,20.5H17.25Q14,20.5 14,17.25V17.25Q14,14 17.25,14Z"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="2.45"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+    </group>
+</vector>

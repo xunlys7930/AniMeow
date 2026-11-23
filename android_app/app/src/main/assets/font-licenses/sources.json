@@ -1,0 +1,38 @@
+[
+  {
+    "file": "animeow_sans.ttf",
+    "family": "AniMeow Sans",
+    "upstream": "Noto Sans SC",
+    "source_url": "https://raw.githubusercontent.com/google/fonts/334b789e33413f3aba4264d9aa6c97f7b94c5a2f/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+    "source_sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+    "sha256": "44894f33c1175dfe7a30dd73c724c7654079ca32bded7ed784cae8d246eb724a",
+    "bytes": 2403408,
+    "glyph_count": 7955,
+    "license": "NotoSansSC-OFL.txt",
+    "modification": "Regular weight, GB2312/UI/kana subset, renamed family; missing glyphs fall back to Android."
+  },
+  {
+    "file": "animeow_serif.ttf",
+    "family": "AniMeow Serif",
+    "upstream": "Noto Serif SC",
+    "source_url": "https://raw.githubusercontent.com/google/fonts/334b789e33413f3aba4264d9aa6c97f7b94c5a2f/ofl/notoserifsc/NotoSerifSC%5Bwght%5D.ttf",
+    "source_sha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9",
+    "sha256": "19906c1ef47fad9c2addab08b2829959c433038ba921777f3624aff3f2731e0e",
+    "bytes": 3334088,
+    "glyph_count": 7955,
+    "license": "NotoSerifSC-OFL.txt",
+    "modification": "Regular weight, GB2312/UI/kana subset, renamed family; missing glyphs fall back to Android."
+  },
+  {
+    "file": "animeow_wenkai.ttf",
+    "family": "AniMeow Handwriting",
+    "upstream": "LXGW WenKai Lite",
+    "source_url": "https://raw.githubusercontent.com/lxgw/LxgwWenKai-Lite/060e8eb22eabd31143efb251f9f58f6e9573dbab/fonts/TTF/LXGWWenKaiLite-Regular.ttf",
+    "source_sha256": "140c99ba4e28e817cec49bf82a0c5fcdc4fe633fb9dfda16d0ee8d59a8545f15",
+    "sha256": "00b46befda6a8e8ab77b2e4821a862e300150c8144c083e96201ba1238ea3dd6",
+    "bytes": 3668424,
+    "glyph_count": 8372,
+    "license": "LXGWWenKaiLite-OFL.txt",
+    "modification": "Regular weight, GB2312/UI/kana subset, renamed family; missing glyphs fall back to Android."
+  }
+]

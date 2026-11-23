@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from design/icons/catalog.xml. Edit the catalog, then run generate.py. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:autoMirrored="false">
+    <path
+        android:pathData="M2.6,10A1.9,2.6 0 1 0 6.4,10A1.9,2.6 0 1 0 2.6,10Z"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="1.55"
+        android:strokeLineCap="square" android:strokeLineJoin="miter"
+        android:strokeMiterLimit="2" />
+    <path
+        android:pathData="M7.4,5.5A2.1,2.8 0 1 0 11.6,5.5A2.1,2.8 0 1 0 7.4,5.5Z"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="1.55"
+        android:strokeLineCap="square" android:strokeLineJoin="miter"
+        android:strokeMiterLimit="2" />
+    <path
+        android:pathData="M12.9,5.5A2.1,2.8 0 1 0 17.1,5.5A2.1,2.8 0 1 0 12.9,5.5Z"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="1.55"
+        android:strokeLineCap="square" android:strokeLineJoin="miter"
+        android:strokeMiterLimit="2" />
+    <path
+        android:pathData="M18.1,10A1.9,2.6 0 1 0 21.9,10A1.9,2.6 0 1 0 18.1,10Z"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="1.55"
+        android:strokeLineCap="square" android:strokeLineJoin="miter"
+        android:strokeMiterLimit="2" />
+    <path
+        android:pathData="M6,18Q6,15 10,12Q12,10.5 14,12Q18,15 18,18Q18,21 15,20L12,19.5L9,20Q6,21 6,18Z"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="1.55"
+        android:strokeLineCap="square" android:strokeLineJoin="miter"
+        android:strokeMiterLimit="2" />
+</vector>

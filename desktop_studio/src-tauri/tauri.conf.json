@@ -1,0 +1,78 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "AniMeow Studio",
+  "version": "2.3.12",
+  "identifier": "com.animeow.studio.dev",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5178",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "追番喵 · AniMeow",
+        "width": 1140,
+        "height": 720,
+        "minWidth": 860,
+        "minHeight": 560,
+        "decorations": false,
+        "dragDropEnabled": false,
+        "shadow": true,
+        "backgroundColor": "#f3eee2"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost http://127.0.0.1:* https: http: data: blob:; media-src 'self' http://127.0.0.1:* blob:; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost ipc://localhost http://127.0.0.1:* https:; style-src 'self' 'unsafe-inline'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": ["nsis"],
+    "publisher": "xunlys",
+    "copyright": "Copyright © xunlys",
+    "category": "Utility",
+    "shortDescription": "追番喵 (AniMeow)",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"],
+        "customLanguageFiles": {
+          "SimpChinese": "nsis/SimpChinese.nsh"
+        },
+        "displayLanguageSelector": false,
+        "compression": "lzma",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "headerImage": "nsis/header.bmp",
+        "uninstallerHeaderImage": "nsis/uninstaller-header.bmp",
+        "sidebarImage": "nsis/sidebar.bmp",
+        "installerHooks": "nsis/hooks.nsh",
+        "startMenuFolder": "追番喵"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhFRTMxQjhEREQ4QUU4OTMKUldTVDZJcmRqUnZqamlha1VXaDg4SjdXcUI4ZkNmODRpSzZHUDBiZUJRVWtsRkloMU8wdHRwVkkK",
+      "endpoints": [
+        "https://www.xunlys.top/api/desktop-updater/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

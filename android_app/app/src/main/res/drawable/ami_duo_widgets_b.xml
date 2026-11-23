@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from design/icons/catalog.xml. Edit the catalog, then run generate.py. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:autoMirrored="false">
+    <path
+        android:pathData="M5.8,3H7.2Q10,3 10,5.8V7.2Q10,10 7.2,10H5.8Q3,10 3,7.2V5.8Q3,3 5.8,3Z"
+        android:fillColor="#FF000000" android:fillAlpha="0.3"
+        android:strokeColor="#FF000000" android:strokeWidth="1.65"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+    <path
+        android:pathData="M5.8,14H7.2Q10,14 10,16.8V18.2Q10,21 7.2,21H5.8Q3,21 3,18.2V16.8Q3,14 5.8,14Z"
+        android:fillColor="#FF000000" android:fillAlpha="0.3"
+        android:strokeColor="#FF000000" android:strokeWidth="1.65"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+    <path
+        android:pathData="M16.8,14H18.2Q21,14 21,16.8V18.2Q21,21 18.2,21H16.8Q14,21 14,18.2V16.8Q14,14 16.8,14Z"
+        android:fillColor="#FF000000" android:fillAlpha="0.3"
+        android:strokeColor="#FF000000" android:strokeWidth="1.65"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+    <path
+        android:pathData="M17.5,3V10 M14,6.5H21"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="1.65"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+</vector>

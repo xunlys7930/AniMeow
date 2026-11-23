@@ -1,0 +1,32 @@
+-- Room v8 entities from fe32b51 (2026-09 repository baseline).
+-- Kotlin property defaults are not SQLite DEFAULT clauses. No user data.
+CREATE TABLE IF NOT EXISTS `animes` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `coverUrl` TEXT, `status` TEXT NOT NULL, `rating` INTEGER, `ratingGrade` TEXT, `funRatingTier` TEXT, `review` TEXT, `seriesId` INTEGER, `createdAt` TEXT, `airDate` TEXT, `studio` TEXT, `watchStartDate` TEXT, `watchFinishDate` TEXT, `watchedEpisodes` INTEGER NOT NULL, `totalEpisodes` INTEGER NOT NULL, `tvEpisodes` INTEGER NOT NULL, `spEpisodes` INTEGER NOT NULL, `subjectType` TEXT NOT NULL, `reminderDay` INTEGER, `reminderTime` TEXT, `deletedAt` TEXT, `externalSource` TEXT, `externalId` TEXT, `externalUrl` TEXT, `originalTitle` TEXT, `synopsis` TEXT, `mediaFormat` TEXT, `broadcastDay` INTEGER, `broadcastTime` TEXT);
+CREATE UNIQUE INDEX IF NOT EXISTS `index_animes_externalSource_externalId` ON `animes` (`externalSource`,`externalId`);
+CREATE TABLE IF NOT EXISTS `tags` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `color` INTEGER, `blocked` INTEGER NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS `index_tags_name` ON `tags` (`name`);
+CREATE TABLE IF NOT EXISTS `anime_tags` (`animeId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL, PRIMARY KEY(`animeId`,`tagId`));
+CREATE INDEX IF NOT EXISTS `index_anime_tags_tagId` ON `anime_tags` (`tagId`);
+CREATE TABLE IF NOT EXISTS `series` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `description` TEXT, `customCoverUrl` TEXT, `createdAt` TEXT);
+CREATE TABLE IF NOT EXISTS `watch_statuses` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `color` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS `index_watch_statuses_name` ON `watch_statuses` (`name`);
+CREATE TABLE IF NOT EXISTS `watch_records` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `animeId` INTEGER NOT NULL, `episode` INTEGER NOT NULL, `status` TEXT, `recordDate` TEXT);
+CREATE INDEX IF NOT EXISTS `index_watch_records_animeId` ON `watch_records` (`animeId`);
+CREATE TABLE IF NOT EXISTS `anime_analysis_records` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `serverRecordId` INTEGER, `userId` INTEGER, `username` TEXT, `model` TEXT, `analysis` TEXT, `statsJson` TEXT, `createdAt` TEXT);
+CREATE TABLE IF NOT EXISTS `characters` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `bgmId` INTEGER, `name` TEXT NOT NULL, `nameCn` TEXT, `imageUrl` TEXT, `summary` TEXT, `gender` TEXT, `birthYear` INTEGER, `birthMonth` INTEGER, `birthDay` INTEGER, `bloodType` TEXT, `infoboxJson` TEXT, `rating` INTEGER, `review` TEXT, `updatedAt` TEXT);
+CREATE UNIQUE INDEX IF NOT EXISTS `index_characters_bgmId` ON `characters` (`bgmId`);
+CREATE TABLE IF NOT EXISTS `anime_characters` (`animeId` INTEGER NOT NULL, `characterId` INTEGER NOT NULL, `roleName` TEXT, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`animeId`,`characterId`));
+CREATE INDEX IF NOT EXISTS `index_anime_characters_characterId` ON `anime_characters` (`characterId`);
+CREATE TABLE IF NOT EXISTS `character_relations` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `sourceCharacterId` INTEGER NOT NULL, `targetCharacterId` INTEGER NOT NULL, `relationType` TEXT NOT NULL, `note` TEXT, `strength` INTEGER NOT NULL, `createdAt` TEXT, `updatedAt` TEXT);
+CREATE INDEX IF NOT EXISTS `index_character_relations_sourceCharacterId` ON `character_relations` (`sourceCharacterId`);
+CREATE INDEX IF NOT EXISTS `index_character_relations_targetCharacterId` ON `character_relations` (`targetCharacterId`);
+CREATE TABLE IF NOT EXISTS `character_tags` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `color` INTEGER, `createdAt` TEXT);
+CREATE UNIQUE INDEX IF NOT EXISTS `index_character_tags_name` ON `character_tags` (`name`);
+CREATE TABLE IF NOT EXISTS `character_tag_links` (`characterId` INTEGER NOT NULL, `tagId` INTEGER NOT NULL, PRIMARY KEY(`characterId`,`tagId`));
+CREATE INDEX IF NOT EXISTS `index_character_tag_links_tagId` ON `character_tag_links` (`tagId`);
+CREATE TABLE IF NOT EXISTS `character_groups` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `description` TEXT, `coverUrl` TEXT, `communityId` TEXT, `shareCode` TEXT, `source` TEXT NOT NULL, `isPublic` INTEGER NOT NULL, `extraJson` TEXT, `createdAt` TEXT, `updatedAt` TEXT);
+CREATE TABLE IF NOT EXISTS `character_group_characters` (`groupId` INTEGER NOT NULL, `characterId` INTEGER NOT NULL, `roleName` TEXT, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`groupId`,`characterId`));
+CREATE INDEX IF NOT EXISTS `index_character_group_characters_characterId` ON `character_group_characters` (`characterId`);
+CREATE TABLE IF NOT EXISTS `character_group_works` (`groupId` INTEGER NOT NULL, `animeId` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`groupId`,`animeId`));
+CREATE INDEX IF NOT EXISTS `index_character_group_works_animeId` ON `character_group_works` (`animeId`);
+CREATE TABLE IF NOT EXISTS `app_logs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `level` TEXT NOT NULL, `message` TEXT NOT NULL, `stack_trace` TEXT, `timestamp` TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS `index_app_logs_timestamp` ON `app_logs` (`timestamp`);

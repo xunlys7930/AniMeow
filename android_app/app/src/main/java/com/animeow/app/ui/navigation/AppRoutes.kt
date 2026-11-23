@@ -1,0 +1,67 @@
+package com.animeow.app.ui.navigation
+
+import android.net.Uri
+
+internal const val DETAIL_ROUTE = "anime/{animeId}"
+internal const val EPISODES_ROUTE_PATTERN = "anime/{animeId}/episodes?episode={episode}"
+internal const val GLOBAL_SEARCH_ROUTE = "search/global"
+internal const val COMMUNITY_INBOX_ROUTE = "community/inbox"
+internal const val PROFILE_TOOLS_ROUTE = "legacy/profile-tools"
+internal const val SUPPORT_ROUTE = "maintenance/support"
+internal const val SETTINGS_ROUTE = "settings"
+internal const val EDITOR_ROUTE_PATTERN = "anime/edit?animeId={animeId}&subjectType={subjectType}"
+internal const val EDITOR_ROUTE = "anime/edit?animeId=-1&subjectType=anime"
+internal const val BOOK_EDITOR_ROUTE = "anime/edit?animeId=-1&subjectType=book"
+internal const val LIBRARY_MANAGEMENT_ROUTE = "library/manage"
+internal const val REMINDER_MANAGEMENT_ROUTE = "settings/reminders"
+internal const val TRASH_ROUTE = "library/trash"
+internal const val DUPLICATES_ROUTE = "library/duplicates"
+internal const val SERIES_SHELF_ROUTE = "library/series"
+internal const val SERIES_DETAIL_ROUTE = "series/{seriesId}"
+internal const val IMAGE_SEARCH_ROUTE = "discovery/image-search"
+internal const val STATUS_COLLECTION_ROUTE = "statistics/status/{statusName}"
+internal const val TAG_INDEX_ROUTE = "tags"
+internal const val TAG_COLLECTION_ROUTE = "tags/{tagId}"
+internal const val ANIME_ANALYSIS_ROUTE = "statistics/analysis"
+internal const val TIER_LIST_ROUTE = "tier-list"
+internal const val CHARACTERS_ROUTE = "characters"
+internal const val CHARACTERS_ROUTE_PATTERN = "characters?characterId={characterId}"
+internal const val CHARACTER_GROUPS_ROUTE = "characters/groups"
+internal const val CHARACTER_GROUPS_ROUTE_PATTERN = "characters/groups?groupId={groupId}"
+internal const val CHARACTER_COMMUNITY_ROUTE = "characters/community"
+internal const val BANGUMI_IMPORT_ROUTE = "data/bangumi-import"
+internal const val BANGUMI_UPLOAD_ROUTE = "data/bangumi-upload"
+internal const val LEGADO_SYNC_ROUTE = "data/legado-sync"
+internal const val SPREADSHEET_TRANSFER_ROUTE = "data/spreadsheet"
+internal const val CUSTOMIZATION_ROUTE = "settings/customization"
+internal const val CUSTOMIZATION_ROUTE_PATTERN = "settings/customization?query={query}&section={section}"
+internal const val BRANDING_ROUTE = "settings/customization/branding"
+internal const val CLOUD_ACCOUNT_ROUTE = "account/cloud"
+internal const val ANNOUNCEMENTS_ROUTE = "app/announcements"
+internal const val PERSONAL_CENTER_ROUTE = "account/personal"
+internal const val COMMUNITY_MANAGEMENT_ROUTE = "community/manage"
+internal const val COMMUNITY_POST_DETAIL_ROUTE = "community/post/{postId}"
+internal const val COMMUNITY_USER_SPACE_ROUTE = "community/user/{userId}"
+internal const val COMMUNITY_BLOCKLIST_ROUTE = "community/blocks"
+internal const val COMMUNITY_FOLLOWS_ROUTE = "community/user/{userId}/follows/{direction}"
+internal const val FEEDBACK_POOL_ROUTE = "account/feedback"
+internal const val DIAGNOSTICS_ROUTE = "settings/diagnostics"
+internal const val ABOUT_ROUTE = "settings/about"
+internal const val CACHE_ROUTE = "settings/about/cache"
+internal const val HELP_ROUTE = "settings/about/help"
+internal const val CHANGELOG_ROUTE = "settings/about/changelog"
+internal const val DISCLAIMER_ROUTE = "settings/about/disclaimer"
+internal const val CREDITS_ROUTE = "settings/about/credits"
+internal const val USER_MANUAL_ROUTE = "settings/manual"
+internal const val GAME_COLLECTION_ROUTE = "library/games"
+internal const val AUDIO_COLLECTION_ROUTE = "library/audio"
+internal const val GAME_DISCOVERY_ROUTE = "discovery/games"
+
+/** [section] 直达外观定制的三级页（进阶分区），返回时回到来源页面。 */
+internal fun customizationRoute(query: String = "", section: String? = null): String {
+    val params = listOfNotNull(
+        query.trim().takeIf(String::isNotEmpty)?.let { "query=${Uri.encode(it)}" },
+        section?.takeIf(String::isNotBlank)?.let { "section=${Uri.encode(it)}" },
+    )
+    return if (params.isEmpty()) CUSTOMIZATION_ROUTE else "$CUSTOMIZATION_ROUTE?${params.joinToString("&")}"
+}

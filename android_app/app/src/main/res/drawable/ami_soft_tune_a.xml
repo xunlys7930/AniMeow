@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from design/icons/catalog.xml. Edit the catalog, then run generate.py. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:autoMirrored="false">
+    <group android:pivotX="12" android:pivotY="12" android:scaleX="0.92" android:scaleY="0.92">
+    <path
+        android:pathData="M3,6H7 M11,6H21 M3,12H13 M17,12H21 M3,18H5 M9,18H21"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="2.45"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+    </group>
+    <group android:pivotX="12" android:pivotY="12" android:scaleX="0.92" android:scaleY="0.92">
+    <path
+        android:pathData="M7,6A2,2 0 1 0 11,6A2,2 0 1 0 7,6Z"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="2.45"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+    </group>
+    <group android:pivotX="12" android:pivotY="12" android:scaleX="0.92" android:scaleY="0.92">
+    <path
+        android:pathData="M13,12A2,2 0 1 0 17,12A2,2 0 1 0 13,12Z"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="2.45"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+    </group>
+    <group android:pivotX="12" android:pivotY="12" android:scaleX="0.92" android:scaleY="0.92">
+    <path
+        android:pathData="M5,18A2,2 0 1 0 9,18A2,2 0 1 0 5,18Z"
+        android:fillColor="#FF000000" android:fillAlpha="0"
+        android:strokeColor="#FF000000" android:strokeWidth="2.45"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:strokeMiterLimit="2" />
+    </group>
+</vector>

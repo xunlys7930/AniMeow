@@ -1,0 +1,54 @@
+# Local and private configuration
+**/local.properties
+**/.env
+**/.env.*
+!**/.env.example
+**/keystore.properties
+**/*.jks
+**/*.keystore
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.ppk
+**/*.kdbx
+
+# Android / Gradle / IDE build outputs
+**/.gradle/
+**/.idea/
+**/.kotlin/
+**/build/
+**/captures/
+**/.externalNativeBuild/
+**/.cxx/
+**/*.iml
+**/*.apk
+**/*.aab
+**/*.apks
+
+# Node / Rust / Tauri build outputs
+**/node_modules/
+**/dist/
+**/target/
+**/coverage/
+desktop_studio/release-output/
+**/*.exe
+**/*.msi
+**/*.nsis.zip
+**/*.sig
+
+# Runtime logs, databases, and personal backups
+**/*.log
+**/*.log.*
+**/crash-*.json
+/diagnostics/
+**/restore_points/
+**/AniMeow_backup_*.zip
+**/*.animeow.zip
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.sqlite
+**/*.sqlite3
+.DS_Store
+Thumbs.db

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="database" path="exoplayer_internal.db" />
+        <exclude domain="database" path="exoplayer_internal.db-wal" />
+        <exclude domain="database" path="exoplayer_internal.db-shm" />
+        <exclude domain="sharedpref" path="playback_download_preferences.xml" />
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="." />
+        <exclude domain="sharedpref" path="cloud_account_secure.xml" />
+        <exclude domain="sharedpref" path="legado_sync_secure.xml" />
+        <exclude domain="sharedpref" path="custom_model_secure.xml" />
+        <exclude domain="sharedpref" path="app_update_download.xml" />
+        <exclude domain="sharedpref" path="watch_interaction_v1.xml" />
+        <include domain="file" path="datastore/" />
+        <include domain="file" path="configuration_profiles.json" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="database" path="exoplayer_internal.db" />
+        <exclude domain="database" path="exoplayer_internal.db-wal" />
+        <exclude domain="database" path="exoplayer_internal.db-shm" />
+        <exclude domain="sharedpref" path="playback_download_preferences.xml" />
+        <include domain="database" path="." />
+        <include domain="sharedpref" path="." />
+        <exclude domain="sharedpref" path="cloud_account_secure.xml" />
+        <exclude domain="sharedpref" path="legado_sync_secure.xml" />
+        <exclude domain="sharedpref" path="custom_model_secure.xml" />
+        <exclude domain="sharedpref" path="app_update_download.xml" />
+        <exclude domain="sharedpref" path="watch_interaction_v1.xml" />
+        <include domain="file" path="datastore/" />
+        <include domain="file" path="configuration_profiles.json" />
+        <include domain="file" path="branding/" />
+        <include domain="file" path="covers/" />
+    </device-transfer>
+</data-extraction-rules>

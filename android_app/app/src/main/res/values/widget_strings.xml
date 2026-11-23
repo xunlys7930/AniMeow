@@ -1,0 +1,10 @@
+<resources>
+    <string name="widget_tracker_title">AniMeow · 继续记录</string>
+    <string name="widget_tracker_description">查看最近在看的作品，一键记录进度。</string>
+    <string name="widget_add_episode">+1</string>
+    <string name="widget_add_episode_accessible">看过一集</string>
+    <string name="widget_empty_library">把作品标记为“在看”，就能在桌面快速记录。</string>
+    <string name="widget_open_library">打开我的收藏</string>
+    <string name="widget_preview_work">喜欢的作品</string>
+    <string name="widget_preview_progress">6 / 12 集</string>
+</resources>

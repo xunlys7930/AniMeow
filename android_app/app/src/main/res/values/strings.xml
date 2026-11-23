@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playback_download_channel">动画离线缓存</string>
+    <string name="app_name">追番喵</string>
+    <string name="overlay_progress">已记录 %1$d / %2$s %3$s</string>
+    <string name="overlay_add_one">+1 %1$s</string>
+    <string name="overlay_move_left">向左移动悬浮窗</string>
+    <string name="overlay_move_right">向右移动悬浮窗</string>
+    <string name="overlay_move_up">向上移动悬浮窗</string>
+    <string name="overlay_move_down">向下移动悬浮窗</string>
+</resources>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@drawable/widget_background">
+    <TextView android:id="@+id/widget_heading" android:layout_width="match_parent" android:layout_height="32dp"
+        android:gravity="center_vertical" android:text="@string/widget_tracker_title" android:textColor="#24573F" android:textStyle="bold" android:textSize="17sp" />
+    <LinearLayout android:id="@+id/widget_row_one" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical" android:orientation="horizontal" android:visibility="gone">
+        <LinearLayout android:id="@+id/widget_open_one" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical">
+            <TextView android:id="@+id/widget_title_one" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:ellipsize="end" android:textColor="#20372C" android:textSize="15sp" />
+            <TextView android:id="@+id/widget_progress_one" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#486052" android:textSize="12sp" />
+        </LinearLayout>
+        <Button android:id="@+id/widget_add_one" android:layout_width="56dp" android:layout_height="48dp" android:text="@string/widget_add_episode" android:textColor="#24573F" android:backgroundTint="#D7E9D8" android:contentDescription="@string/widget_add_episode_accessible" />
+    </LinearLayout>
+    <LinearLayout android:id="@+id/widget_row_two" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical" android:orientation="horizontal" android:visibility="gone">
+        <LinearLayout android:id="@+id/widget_open_two" android:layout_width="0dp" android:layout_weight="1" android:layout_height="match_parent" android:gravity="center_vertical" android:orientation="vertical">
+            <TextView android:id="@+id/widget_title_two" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:ellipsize="end" android:textColor="#20372C" android:textSize="15sp" />
+            <TextView android:id="@+id/widget_progress_two" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="#486052" android:textSize="12sp" />
+        </LinearLayout>
+        <Button android:id="@+id/widget_add_two" android:layout_width="56dp" android:layout_height="48dp" android:text="@string/widget_add_episode" android:textColor="#24573F" android:backgroundTint="#D7E9D8" android:contentDescription="@string/widget_add_episode_accessible" />
+    </LinearLayout>
+    <TextView android:id="@+id/widget_empty" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:paddingTop="12dp" android:paddingBottom="12dp" android:text="@string/widget_empty_library" android:textColor="#486052" android:textSize="14sp" />
+    <TextView android:id="@+id/widget_footer" android:layout_width="match_parent" android:layout_height="30dp"
+        android:gravity="center_vertical" android:text="@string/widget_open_library" android:textColor="#24573F" android:textSize="12sp" />
+</LinearLayout>

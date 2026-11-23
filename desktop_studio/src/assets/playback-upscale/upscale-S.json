@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "scale": 2,
+  "passes": [
+    {
+      "shader": "upscale-S-0.glsl",
+      "inputs": [
+        {
+          "name": "MAIN",
+          "source": -1,
+          "unit": 0,
+          "size": true
+        }
+      ]
+    },
+    {
+      "shader": "upscale-S-1.glsl",
+      "inputs": [
+        {
+          "name": "conv2d_tf",
+          "source": 0,
+          "unit": 0,
+          "size": true
+        }
+      ]
+    },
+    {
+      "shader": "upscale-S-2.glsl",
+      "inputs": [
+        {
+          "name": "conv2d_1_tf",
+          "source": 1,
+          "unit": 0,
+          "size": true
+        }
+      ]
+    },
+    {
+      "shader": "upscale-S-3.glsl",
+      "inputs": [
+        {
+          "name": "conv2d_2_tf",
+          "source": 2,
+          "unit": 0,
+          "size": true
+        }
+      ]
+    },
+    {
+      "shader": "upscale-S-4.glsl",
+      "inputs": [
+        {
+          "name": "MAIN",
+          "source": -1,
+          "unit": 0,
+          "size": false
+        },
+        {
+          "name": "conv2d_last_tf",
+          "source": 3,
+          "unit": 1,
+          "size": true
+        }
+      ]
+    }
+  ]
+}

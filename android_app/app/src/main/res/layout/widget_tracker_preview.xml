@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@drawable/widget_background">
+    <TextView android:layout_width="match_parent" android:layout_height="32dp"
+        android:gravity="center_vertical" android:text="@string/widget_tracker_title" android:textColor="#24573F" android:textStyle="bold" android:textSize="17sp" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical" android:orientation="horizontal">
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/widget_preview_work" android:textColor="#20372C" android:textSize="15sp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/widget_preview_progress" android:textColor="#486052" android:textSize="12sp" />
+        </LinearLayout>
+        <Button android:layout_width="56dp" android:layout_height="48dp" android:text="@string/widget_add_episode" android:textColor="#24573F" android:backgroundTint="#D7E9D8" android:contentDescription="@string/widget_add_episode_accessible" />
+    </LinearLayout>
+    <TextView android:layout_width="match_parent" android:layout_height="30dp"
+        android:gravity="center_vertical" android:text="@string/widget_open_library" android:textColor="#24573F" android:textSize="12sp" />
+</LinearLayout>

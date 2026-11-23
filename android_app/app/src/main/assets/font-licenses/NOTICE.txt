@@ -1,0 +1,13 @@
+AniMeow 内置字体 / Bundled fonts
+
+清晰黑体：基于 Noto Sans SC（Adobe / Google）。
+文艺宋体：基于 Noto Serif SC（Google）。
+轻松手写：基于 LXGW WenKai Lite（霞鹜 / lxgw）。
+
+三款均使用 SIL Open Font License 1.1，允许免费使用、嵌入与再分发，不单独售卖字体。原作者不为 AniMeow 背书。
+为控制包体，内置的是常规字重子集，包含 GB2312、应用用字、假名与常用符号；缺字由系统补足。修改版内部字体名分别为 AniMeow Sans / AniMeow Serif / AniMeow Handwriting。原始版权与许可证全文附后。
+
+来源：https://github.com/google/fonts/tree/main/ofl/notosanssc
+https://github.com/google/fonts/tree/main/ofl/notoserifsc
+https://github.com/lxgw/LxgwWenKai-Lite
+精确提交与文件摘要见 sources.json。外部导入字体由用户自行选择，不属于这些字体的授权范围。

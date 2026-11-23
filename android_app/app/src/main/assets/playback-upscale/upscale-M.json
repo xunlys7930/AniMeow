@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "scale": 2,
+  "passes": [
+    {
+      "shader": "upscale-M-0.glsl",
+      "inputs": [
+        {
+          "name": "MAIN",
+          "source": -1,
+          "unit": 0,
+          "size": true
+        }
+      ]
+    },
+    {
+      "shader": "upscale-M-1.glsl",
+      "inputs": [
+        {
+          "name": "conv2d_tf",
+          "source": 0,
+          "unit": 0,
+          "size": true
+        }
+      ]
+    },
+    {
+      "shader": "upscale-M-2.glsl",
+      "inputs": [
+        {
+          "name": "conv2d_1_tf",
+          "source": 1,
+          "unit": 0,
+          "size": true
+        }
+      ]
+    },
+    {
+      "shader": "upscale-M-3.glsl",
+      "inputs": [
+        {
+          "name": "conv2d_2_tf",
+          "source": 2,
+          "unit": 0,
+          "size": true
+        }
+      ]
+    },
+    {
+      "shader": "upscale-M-4.glsl",
+      "inputs": [
+        {
+          "name": "conv2d_3_tf",
+          "source": 3,
+          "unit": 0,
+          "size": true
+        }
+      ]
+    },
+    {
+      "shader": "upscale-M-5.glsl",
+      "inputs": [
+        {
+          "name": "conv2d_4_tf",
+          "source": 4,
+          "unit": 0,
+          "size": true
+        }
+      ]
+    },
+    {
+      "shader": "upscale-M-6.glsl",
+      "inputs": [
+        {
+          "name": "conv2d_5_tf",
+          "source": 5,
+          "unit": 0,
+          "size": true
+        }
+      ]
+    },
+    {
+      "shader": "upscale-M-7.glsl",
+      "inputs": [
+        {
+          "name": "conv2d_tf",
+          "source": 0,
+          "unit": 0,
+          "size": false
+        },
+        {
+          "name": "conv2d_1_tf",
+          "source": 1,
+          "unit": 1,
+          "size": false
+        },
+        {
+          "name": "conv2d_2_tf",
+          "source": 2,
+          "unit": 2,
+          "size": false
+        },
+        {
+          "name": "conv2d_3_tf",
+          "source": 3,
+          "unit": 3,
+          "size": false
+        },
+        {
+          "name": "conv2d_4_tf",
+          "source": 4,
+          "unit": 4,
+          "size": false
+        },
+        {
+          "name": "conv2d_5_tf",
+          "source": 5,
+          "unit": 5,
+          "size": false
+        },
+        {
+          "name": "conv2d_6_tf",
+          "source": 6,
+          "unit": 6,
+          "size": false
+        }
+      ]
+    },
+    {
+      "shader": "upscale-M-8.glsl",
+      "inputs": [
+        {
+          "name": "MAIN",
+          "source": -1,
+          "unit": 0,
+          "size": false
+        },
+        {
+          "name": "conv2d_last_tf",
+          "source": 7,
+          "unit": 1,
+          "size": true
+        }
+      ]
+    }
+  ]
+}
